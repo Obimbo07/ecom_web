@@ -1,20 +1,15 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-import Navbar from './components/navigation/Navbar'
-
-function App() {
-  const [count, setCount] = useState(0)
-
+import { Routes, Route } from 'react-router-dom';
+import Navbar from './components/navigation/Navbar';
+import Home from './pages/Home';
+const App = () => {
   return (
-    <>
-    <div className="h-vh">
-      
+    <div className="bg-gradient-to-br from-gray-900 to-blue-900">
+      <Routes>
+        <Route path="/" element={<Home />} />
+      </Routes>
       <Navbar />
     </div>
-    </>
-  )
-}
+  );
+};
 
-export default App
+export default App;
