@@ -6,6 +6,7 @@ import Login from './pages/SignIn';
 import Cart from './pages/Cart';
 import Categories from './pages/Categories';
 import CategoryProducts from './pages/CategoryProducts';
+import Profile from './pages/Profile';
 
 // Component to conditionally render Navbar
 const AppContent = () => {
@@ -24,6 +25,7 @@ const AppContent = () => {
           <Route path="/cart" element={<Cart />} />
           <Route path="/shop" element={<Categories />} />
           <Route path="/category/:categoryId" element={<CategoryProducts />} />
+          <Route path="/profile" element={<Profile />} />
         </Routes>
       </main>
       {!hideNavbar && <Navbar />}
