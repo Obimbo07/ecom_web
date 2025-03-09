@@ -4,3 +4,33 @@
 
 @custom-variant dark (&:is(.dark *));
 
+body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  #root {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  
+  main {
+    flex: 1 0 auto; /* Allows main content to grow but not shrink below content height */
+  }
+  
+  .navbar {
+    flex-shrink: 0; /* Prevents navbar from shrinking */
+  }
+
+  @media (max-width: 640px) {
+    .menubar {
+      padding: 0.5rem;
+    }
+    .menubartrigger span {
+      font-size: 0.75rem;
+    }
+  }
