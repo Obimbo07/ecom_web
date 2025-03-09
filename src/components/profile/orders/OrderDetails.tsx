@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import api from '../../../api'; // Adjust the import path as necessary
-import mpesaModal from '@/components/paymentModal/mpesaModal';
-import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer"
+import api from '../../../api';
 import MpesaModal from '@/components/paymentModal/mpesaModal';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
-
+// Define interfaces
 interface Order {
   id: number;
   created_at: string;
@@ -88,6 +88,7 @@ const OrderDetails = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+  const [isOpen, setIsOpen] = useState(false); // State to control modal visibility
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -127,9 +128,6 @@ const OrderDetails = () => {
     fetchOrderDetails();
   }, [orderId]);
 
-
-
-
   if (loading) {
     return <div className="text-center py-10">Loading...</div>;
   }
@@ -146,12 +144,14 @@ const OrderDetails = () => {
     <div className="min-h-screen bg-gray-100 p-4">
       <h2 className="text-2xl font-semibold mb-6">Order #{order.id}</h2>
       <p className="text-gray-600 mb-4">{order.created_at}</p>
-     
+      
       <div className='flex capitalize justify-between mb-4 bg-white rounded-lg shadow-md p-4'>
-        Order Status: <p className={`text-sm ${order.status === 'Delivered' ? 'text-green-600' : 'text-yellow-600'}`}>
+        <p>Order Status:</p>
+        <p className={`text-sm ${order.status === 'Delivered' ? 'text-green-600' : 'text-yellow-600'}`}>
           {order.status}
         </p>
-        Payment Status: <p className={`text-sm ${order.payment_status === 'Paid' ? 'text-green-600' : 'text-yellow-600'}`}>
+        <p>Payment Status:</p>
+        <p className={`text-sm ${order.payment_status === 'Paid' ? 'text-green-600' : 'text-yellow-600'}`}>
           {order.payment_status}
         </p>
       </div>
@@ -178,11 +178,9 @@ const OrderDetails = () => {
         ))}
       </div>
 
-      <span className='flex justify-between mb-4 bg-white rounded-lg shadow-md p-4'>
-        <p className="text-black font-semibold text-2lg">Total Amount: Ksh {order.total_amount}</p>
-      </span>
-
-
+      <div className='flex justify-between mb-4 bg-white rounded-lg shadow-md p-4'>
+        <p className="text-black font-semibold text-2lg">Total Amount: Ksh {order.total_amount.toFixed(2)}</p>
+      </div>
 
       {/* Address and Payment Information */}
       {address && <AddressCard address={address} />}
@@ -194,38 +192,40 @@ const OrderDetails = () => {
         <p className="text-gray-600">Tracking #: IW34753455</p> {/* Mock tracking number */}
         <p className="text-gray-600">Delivery Method: FedEx, 3 days</p>
         <p className="text-gray-600">Discount: 10%, Personal Promo Code</p>
-        <p className="text-gray-600">Total Amount: Ksh {order.total_amount}</p>
+        <p className="text-gray-600">Total Amount: Ksh {order.total_amount.toFixed(2)}</p>
       </div>
 
       {/* Actions */}
-      <div className='flex gap-4'> 
-      <Drawer className='w-full'>
-        {order.payment_status == 'paid' ? (
-          <DrawerTrigger className="flex-1 bg-gray-200 text-gray-700 py-2 rounded" disabled>
-            Order Paid
-          </DrawerTrigger>
-        ) : (
-          <DrawerTrigger className="flex-1 bg-blue-500 text-white py-2 rounded" >
-            Pay Now
-          </DrawerTrigger>
-        )}
-        <DrawerContent className='bg-white'>
-          <DrawerHeader>
-            <MpesaModal isOpen={true} onClose={function (): void {
-                throw new Error('Function not implemented.');
-              } } orderId={orderId} amount={order.total_amount} />
-            <DrawerTitle>Are you absolutely sure?</DrawerTitle>
-            <DrawerDescription>This action cannot be undone.</DrawerDescription>
-          </DrawerHeader>
-          <DrawerFooter>
-            <button className="bg-blue-500 text-white py-2 px-4 rounded">Submit</button>
-            <DrawerClose>
-              <button className="bg-gray-200 text-gray-700 py-2 px-4 rounded">Cancel</button>
-            </DrawerClose>
-          </DrawerFooter>
-        </DrawerContent>
-
-      </Drawer>
+      <div className='flex gap-4'>
+        <Dialog>
+          {order.payment_status !== 'paid' ? (
+            <DialogTrigger asChild>
+              <Button className="flex-1 bg-blue-500 text-white py-2 rounded">
+                Pay Now
+              </Button>
+            </DialogTrigger>
+          ) : (
+            <Button className="flex-1 bg-gray-200 text-gray-700 py-2 rounded" disabled>
+              Order Paid
+            </Button>
+          )}
+          <DialogContent className="h-screen bg-white">
+            <DialogHeader>
+              <DialogTitle></DialogTitle>
+              <DialogDescription>
+              </DialogDescription>
+            </DialogHeader>
+            <MpesaModal
+              isOpen={true}
+              onClose={{}}
+              orderId={order.id}
+              amount={order.total_amount}
+            />
+            <DialogClose asChild>
+                  <Button className='bg-red-600 text-white'variant="secondary">Close</Button>
+             </DialogClose>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
