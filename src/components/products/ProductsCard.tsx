@@ -2,6 +2,7 @@ import api from '@/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { useState } from 'react';
 import { FaStar } from 'react-icons/fa'; // For rating stars
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 // Define the Product interface based on the ProductResponse model
 interface Product {
@@ -23,11 +24,10 @@ export function ProductCard({ product }: ProductCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [completeDisabled, setCompleteDisabled] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const hasDiscount = product.old_price > product.price;
   const discountPercentage = hasDiscount
-    ? Math.round(((product.old_price - product.price) / product.old_price) * 100)
-    : 0;
 
   // Render stars based on rating (placeholder logic; adjust based on actual rating source)
   const renderStars = (rating: number) => {
@@ -106,7 +106,7 @@ export function ProductCard({ product }: ProductCardProps) {
               disabled={fetchDisabled}
               className="bg-green-500 p-2 rounded-xl"
             >
-              {fetchDisabled ? `Adding to cart (s)` : 'Add to cart'}
+              {fetchDisabled ? `Added to cart` : 'Add to cart'}
             </button>
             
             <button
