@@ -2,7 +2,7 @@ import api from '@/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { useState } from 'react';
 import { FaStar } from 'react-icons/fa'; // For rating stars
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+// import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 // Define the Product interface based on the ProductResponse model
 interface Product {
@@ -11,7 +11,6 @@ interface Product {
   price: number;
   old_price: number;
   image: string | null; // Base64-encoded image
-  rating: number;
   additional_images: { id: number; image: string | null; date: string }[];
 }
 
@@ -21,14 +20,16 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const [fetchDisabled, setFetchDisabled] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [completeDisabled, setCompleteDisabled] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const navigate = useNavigate(); // Initialize useNavigate
+  // const [setIsLoading] = useState(false);
+  const [completeDisabled] = useState(false);
+  // const [ setMessage] = useState<string | null>(null);
+  // const navigate = useNavigate();??// Initialize useNavigate
 
   const hasDiscount = product.old_price > product.price;
   const discountPercentage = hasDiscount
-
+    ? Math.round(((product.old_price - product.price) / product.old_price) * 100)
+    : 0;
+    
   // Render stars based on rating (placeholder logic; adjust based on actual rating source)
   const renderStars = (rating: number) => {
     const stars = [];
@@ -47,18 +48,18 @@ export function ProductCard({ product }: ProductCardProps) {
     setFetchDisabled(true);
   
     try {
-      const addToCartResponse = await api.post(`/api/cart/items/`, {
+      const addToCartResponse = await api.post(`/api/cart/`, {
         product_id: product.id,
         quantity: 1,
       });
       console.log(addToCartResponse.data, 'cart response');
-      setTimeout(() => setMessage(null), 3000); // Clear message after 3 seconds
+      // setTimeout(() => setMessage(null), 3000); // Clear message after 3 seconds
     } catch (err: any) {
       console.error('Error adding to cart:', err);
-      setMessage(err.response?.data?.detail || 'Failed to add to cart.');
-      setTimeout(() => setMessage(null), 3000);
+      // setMessage(err.response?.data?.detail || 'Failed to add to cart.');
+      // setTimeout(() => setMessage(null), 3000);
     } finally {
-      setIsLoading(false);
+      // setIsLoading(false);
     }
   }
 
@@ -92,11 +93,11 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold text-green-600">
-              Ksh {product.price.toFixed(2)}
+              Ksh {product.price}
             </span>
             {hasDiscount && (
               <span className="text-sm text-gray-500 line-through">
-                Ksh {product.old_price.toFixed(2)}
+                Ksh {product.old_price}
               </span>
             )}
           </div>

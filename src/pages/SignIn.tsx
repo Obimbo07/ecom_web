@@ -15,9 +15,10 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await api.post('/users/users/login', { username, password });
-      console.log(response);
+      const response = await api.post('users/login/', { username, password });
+      console.log(response, 'response');
       localStorage.setItem('token', response.data.access_token);
+      localStorage.setItem('refresh_token', response.data.refresh_token);
       login();
       navigate('/');
     } catch (err) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '@/api';
 import MpesaModal from '@/components/paymentModal/mpesaModal';
@@ -9,7 +9,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -81,14 +80,12 @@ const PaymentCard = ({ payment }: { payment: PaymentMethod }) => (
 );
 
 const OrderDetails = () => {
-  const { orderid } = useParams<{ orderid: number }>();
+  const { orderid } = useParams<{ orderid: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [address, setAddress] = useState<Address | null>(null);
   const [payment, setPayment] = useState<PaymentMethod | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
-  const [isOpen, setIsOpen] = useState(false); // State to control modal visibility
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -101,7 +98,7 @@ const OrderDetails = () => {
         const productsResponse = await api.get('api/products/');
         const products = productsResponse.data;
 
-        const updatedItems = selectedOrder.items.map((item) => {
+        const updatedItems = selectedOrder.items.map((item: any) => {
           const product = products.find((product: Product) => product.title === item.product_title);
           return {
             ...item,
@@ -111,11 +108,11 @@ const OrderDetails = () => {
 
         setOrder({ ...selectedOrder, items: updatedItems });
 
-        const addressResponse = await api.get('users/users/shipping-addresses/');
+        const addressResponse = await api.get('users/shipping-addresses');
         const addressData = addressResponse.data.find((addr: Address) => addr.is_default);
         setAddress(addressData);
 
-        const paymentResponse = await api.get('users/users/payment-methods/');
+        const paymentResponse = await api.get('users/payment-methods');
         const paymentData = paymentResponse.data.find((pay: PaymentMethod) => pay.is_default);
         setPayment(paymentData);
       } catch (err: any) {
@@ -172,14 +169,14 @@ const OrderDetails = () => {
               <p className="text-gray-600">Color: Gray</p> {/* Mock color */}
               <p className="text-gray-600">Size: {item.size || 'N/A'}</p>
               <p className="text-gray-600">Qty: {item.quantity}</p>
-              <p className="font-semibold">Ksh {item.price.toFixed(2)}</p>
+              <p className="font-semibold">Ksh {item.price}</p>
             </div>
           </div>
         ))}
       </div>
 
       <div className='flex justify-between mb-4 bg-white rounded-lg shadow-md p-4'>
-        <p className="text-black font-semibold text-2lg">Total Amount: Ksh {order.total_amount.toFixed(2)}</p>
+        <p className="text-black font-semibold text-2lg">Total Amount: Ksh {order.total_amount}</p>
       </div>
 
       {/* Address and Payment Information */}
@@ -192,7 +189,7 @@ const OrderDetails = () => {
         <p className="text-gray-600">Tracking #: IW34753455</p> {/* Mock tracking number */}
         <p className="text-gray-600">Delivery Method: FedEx, 3 days</p>
         <p className="text-gray-600">Discount: 10%, Personal Promo Code</p>
-        <p className="text-gray-600">Total Amount: Ksh {order.total_amount.toFixed(2)}</p>
+        <p className="text-gray-600">Total Amount: Ksh {order.total_amount}</p>
       </div>
 
       {/* Actions */}
@@ -217,8 +214,8 @@ const OrderDetails = () => {
             </DialogHeader>
             <MpesaModal
               isOpen={true}
-              onClose={{}}
-              orderId={order.id}
+              onClose={() => {}}
+              orderId={order.id.toString()}
               amount={order.total_amount}
             />
             <DialogClose asChild>

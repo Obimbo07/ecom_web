@@ -1,8 +1,6 @@
 import HomeCarousel from "@/components/carousel/HomeCarousel";
 import ProductsCarousel from "@/components/products/ProductsCarousel";
 import { useAuth } from "@/context/AuthContext";
-import { useEffect, useState } from "react";
-import { DNA } from 'react-loader-spinner';
 import { Navigate } from "react-router-dom";
 
 const Home = () => {

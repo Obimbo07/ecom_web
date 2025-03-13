@@ -31,14 +31,14 @@ const Cart = () => {
   const [cart, setCart] = useState<CartResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [order, setOrder] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null); // For feedback
 
   const fetchCart = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('api/cart/'); // Adjusted endpoint without 'api/' prefix
+      const response = await api.get('api/cart/');
+      console.log(response.data, 'data response') // Adjusted endpoint without 'api/' prefix
       const cartData: CartResponse = response.data;
 
       // Fetch product details for each cart item
@@ -70,7 +70,7 @@ const Cart = () => {
   const updateCartItem = async (cartItemId: number, quantity?: number, size?: string) => {
     try {
       setMessage(null);
-      const response = await api.put(`api/cart/items/${cartItemId}`, { quantity, size });
+      const response = await api.put(`api/cart/${cartItemId}/`, { quantity, size });
       const updatedCart: CartResponse = response.data;
       setCart(updatedCart); // Update with response data (though we'll refetch below)
       await fetchCart(); // Refetch to ensure sync with server
@@ -86,7 +86,7 @@ const Cart = () => {
   const removeFromCart = async (cartItemId: number) => {
     try {
       setMessage(null);
-      await api.delete(`api/cart/items/${cartItemId}`);
+      await api.delete(`api/cart/${cartItemId}/`);
       await fetchCart(); // Refetch to ensure sync with server
       setMessage('Item removed from cart!');
       setTimeout(() => setMessage(null), 3000);
@@ -97,14 +97,14 @@ const Cart = () => {
   };
 
   // Increment quantity
-  const incrementQuantity = (cartItemId: number, currentQuantity: number) => {
-    updateCartItem(cartItemId, currentQuantity = 1);
+  const incrementQuantity = (cartItemId: number, _currentQuantity: number) => {
+    updateCartItem(cartItemId, 1);
   };
 
   // Decrement quantity
   const decrementQuantity = (cartItemId: number, currentQuantity: number) => {
     if (currentQuantity > 1) {
-      updateCartItem(cartItemId, currentQuantity = -1);
+      updateCartItem(cartItemId, -1);
     }
   };
 
@@ -112,11 +112,10 @@ const Cart = () => {
     try {
   8
       const response = await api.post('/api/orders/');
-      if (!response) throw new Error('Failed to createe order');
+      if (!response) throw new Error('Failed to create order');
       const data = await response.data;
       console.log(data, 'order id');
       console.log(data.id, 'order id');
-      setOrder(data.id);
       return  navigate(`/checkout/${data.id}`); 
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to update create order');
@@ -179,7 +178,7 @@ const Cart = () => {
             {/* Product Details */}
             <div className="flex-1">
               <h3 className="text-lg font-semibold">{item.product?.title || 'Unknown Product'}</h3>
-              <p className="text-gray-600">Price: Ksh {item.product?.price?.toFixed(2) || 0}</p>
+              <p className="text-gray-600">Price: Ksh {item.product?.price || 0}</p>
               <p className="text-gray-600">Total: Ksh {(item.product?.price || 0) * item.quantity}</p>
 
               {/* Quantity Controls */}
@@ -232,7 +231,7 @@ const Cart = () => {
       {/* Cart Summary */}
       <div className="mt-6 p-4 w-full bg-white rounded-lg shadow-md">
         <h3 className="text-lg font-semibold">Cart Summary</h3>
-        <p className="text-gray-600 mt-2">Total: Ksh {cart.total.toFixed(2)}</p>
+        <p className="text-gray-600 mt-2">Total: Ksh {cart.total}</p>
         <Button
           onClick={handleProceedToCheckout}
           className="block w-full mt-4 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition text-center"

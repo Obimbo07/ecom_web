@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { FaArrowRight, FaUserAlt } from 'react-icons/fa';
-
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/context/AuthContext';
 // Define interfaces based on API responses
 interface User {
   username: string;
@@ -49,14 +50,16 @@ const Profile = () => {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
-
+  const {logout} = useAuth();
+  const navigate = useNavigate();
+  
   // Fetch user data
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
         setLoading(true);
         // Fetch user details (mocked via get_current_user dependency)
-        const userResponse = await api.get('users/users/me/'); // Assuming an endpoint for user details
+        const userResponse = await api.get('users/me/'); // Assuming an endpoint for user details
         setUser(userResponse.data);
 
         // Fetch orders
@@ -68,11 +71,11 @@ const Profile = () => {
         setReviews(reviewsResponse.data);
 
         // Fetch shipping addresses (mocked; replace with actual endpoint)
-        const shippingResponse = await api.get('users/users/shipping-addresses/'); // Placeholder
+        const shippingResponse = await api.get('users/shipping-addresses'); // Placeholder
         setShippingAddresses(shippingResponse.data);
 
         // Fetch payment methods (mocked; replace with actual endpoint)
-        const paymentResponse = await api.get('users/users/payment-methods/'); // Placeholder
+        const paymentResponse = await api.get('users/payment-methods'); // Placeholder
         setPaymentMethods(paymentResponse.data);
       } catch (err: any) {
         setError(err.response?.data?.detail || 'Failed to fetch profile data.');
@@ -82,6 +85,11 @@ const Profile = () => {
     };
     fetchProfileData();
   }, []);
+
+  const handleLogOutClick = () => {
+    logout();
+    navigate('/');
+  }
 
   if (loading) {
     return <div className="text-center py-10">Loading...</div>;
@@ -114,6 +122,13 @@ const Profile = () => {
             <p className="text-gray-600">{user?.email || 'No email'}</p>
           </div>
         </div>
+      </div>
+      
+      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+        <Button
+         className='bg-red-500 text-white'
+         onClick={handleLogOutClick}
+        >Sign Out</Button>
       </div>
 
       {/* Profile Sections */}
