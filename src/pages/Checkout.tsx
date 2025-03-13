@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import api from '../../../api';
+import api from '@/api';
 import MpesaModal from '@/components/paymentModal/mpesaModal';
 import {
   Dialog,
@@ -80,7 +80,7 @@ const PaymentCard = ({ payment }: { payment: PaymentMethod }) => (
 );
 
 const OrderDetails = () => {
-  const { orderId } = useParams<{ orderId: string }>();
+  const { orderid } = useParams<{ orderid: string }>();
   const [order, setOrder] = useState<Order | null>(null);
   const [address, setAddress] = useState<Address | null>(null);
   const [payment, setPayment] = useState<PaymentMethod | null>(null);
@@ -92,7 +92,7 @@ const OrderDetails = () => {
       try {
         setLoading(true);
         const orderResponse = await api.get('api/user/orders/');
-        const selectedOrder = orderResponse.data.find((order: Order) => order.id === Number(orderId));
+        const selectedOrder = orderResponse.data.find((order: Order) => order.id === Number(orderid));
         if (!selectedOrder) throw new Error('Order not found');
 
         const productsResponse = await api.get('api/products/');
@@ -108,11 +108,11 @@ const OrderDetails = () => {
 
         setOrder({ ...selectedOrder, items: updatedItems });
 
-        const addressResponse = await api.get('users/shipping-addresses/');
+        const addressResponse = await api.get('users/shipping-addresses');
         const addressData = addressResponse.data.find((addr: Address) => addr.is_default);
         setAddress(addressData);
 
-        const paymentResponse = await api.get('users/payment-methods/');
+        const paymentResponse = await api.get('users/payment-methods');
         const paymentData = paymentResponse.data.find((pay: PaymentMethod) => pay.is_default);
         setPayment(paymentData);
       } catch (err: any) {
@@ -123,7 +123,7 @@ const OrderDetails = () => {
     };
 
     fetchOrderDetails();
-  }, [orderId]);
+  }, [orderid]);
 
   if (loading) {
     return <div className="text-center py-10">Loading...</div>;

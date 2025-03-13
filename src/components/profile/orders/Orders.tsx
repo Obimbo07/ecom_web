@@ -76,7 +76,7 @@ const Orders = () => {
                 <h4 className="text-lg font-semibold">Order #{order.id}</h4>
                 <p className="text-gray-600">Tracking #: IW34753455</p> {/* Mock tracking number */}
                 <p className="text-gray-600">Quantity: {order.items.reduce((sum, item) => sum + item.quantity, 0)}</p>
-                <p className="text-gray-600">Total Amount: Ksh {order.total_amount.toFixed(2)}</p>
+                <p className="text-gray-600">Total Amount: Ksh {order.total_amount}</p>
                 <div className='flex gap-2'>
                 Order Status: 
                     <p className={`text-sm ${order.status === 'delivered' ? 'text-green-600' : order.status === 'processing' ? 'text-yellow-600' : order.status === 'shipped' ? 'text-yellow-600': 'text-orange-600'}`}>

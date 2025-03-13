@@ -6,6 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/',
   plugins: [
     react(),
     tailwindcss(),
@@ -22,9 +23,9 @@ export default defineConfig({
         cleanupOutdatedCaches: false,
       },
       manifest: {
-        name: 'Your App Name',
-        short_name: 'App',
-        description: 'Your App Description',
+        name: 'Moha Fashion Store',
+        short_name: 'Moha Fashion',
+        description: 'Wholesale and Retail for Apparel and Clothing Best Deals under one roof',
         theme_color: '#ffffff',
       }
   })

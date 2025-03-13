@@ -1,5 +1,8 @@
+import api from '@/api';
 import { Card, CardContent } from '@/components/ui/card';
+import { useState } from 'react';
 import { FaStar } from 'react-icons/fa'; // For rating stars
+// import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 // Define the Product interface based on the ProductResponse model
 interface Product {
@@ -8,7 +11,6 @@ interface Product {
   price: number;
   old_price: number;
   image: string | null; // Base64-encoded image
-  rating: number;
   additional_images: { id: number; image: string | null; date: string }[];
 }
 
@@ -17,12 +19,17 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  // Calculate discount if old_price exists and is greater than price
+  const [fetchDisabled, setFetchDisabled] = useState(false);
+  // const [setIsLoading] = useState(false);
+  const [completeDisabled] = useState(false);
+  // const [ setMessage] = useState<string | null>(null);
+  // const navigate = useNavigate();??// Initialize useNavigate
+
   const hasDiscount = product.old_price > product.price;
   const discountPercentage = hasDiscount
     ? Math.round(((product.old_price - product.price) / product.old_price) * 100)
     : 0;
-
+    
   // Render stars based on rating (placeholder logic; adjust based on actual rating source)
   const renderStars = (rating: number) => {
     const stars = [];
@@ -37,10 +44,28 @@ export function ProductCard({ product }: ProductCardProps) {
     return stars;
   };
 
+  const handleAddToCart = async () => {
+    setFetchDisabled(true);
+  
+    try {
+      const addToCartResponse = await api.post(`/api/cart/`, {
+        product_id: product.id,
+        quantity: 1,
+      });
+      console.log(addToCartResponse.data, 'cart response');
+      // setTimeout(() => setMessage(null), 3000); // Clear message after 3 seconds
+    } catch (err: any) {
+      console.error('Error adding to cart:', err);
+      // setMessage(err.response?.data?.detail || 'Failed to add to cart.');
+      // setTimeout(() => setMessage(null), 3000);
+    } finally {
+      // setIsLoading(false);
+    }
+  }
+
   return (
     <Card className="border-none overflow-hidden p-0 shadow-lg hover:shadow-xl transition-shadow">
       <CardContent className="p-0">
-        {/* Product Image */}
         <div className="w-full h-48 bg-gray-200 relative">
           {product.image ? (
             <img
@@ -68,14 +93,31 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold text-green-600">
-              Ksh {product.price.toFixed(2)}
+              Ksh {product.price}
             </span>
             {hasDiscount && (
               <span className="text-sm text-gray-500 line-through">
-                Ksh {product.old_price.toFixed(2)}
+                Ksh {product.old_price}
               </span>
             )}
           </div>
+          <div className="flex justify-between text-white text-sm space-x-2">
+            <button
+              onClick={handleAddToCart}
+              disabled={fetchDisabled}
+              className="bg-green-500 p-2 rounded-xl"
+            >
+              {fetchDisabled ? `Added to cart` : 'Add to cart'}
+            </button>
+            
+            <button
+              // onClick={handleComplete}
+              disabled={completeDisabled}
+              className="bg-green-500 p-2 rounded-xl"
+            >
+              {completeDisabled ? `Complete (s)` : 'View Product'}
+            </button>
+            </div>
         </div>
       </CardContent>
     </Card>

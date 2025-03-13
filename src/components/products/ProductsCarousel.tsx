@@ -15,6 +15,7 @@ interface Product {
   price: number;
   old_price: number;
   image: string | null;
+  rating: number;
   additional_images: { id: number; image: string | null; date: string }[];
 }
 

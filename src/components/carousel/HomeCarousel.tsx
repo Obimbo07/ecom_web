@@ -22,7 +22,7 @@ const banners: Banner[] = [
     buttonLink: '/shop',
   },
   {
-    image: '/sales2.jpg',
+    image: 'sales2.jpg',
     title: 'WINTER COLLECTION',
     buttonText: 'Explore',
     buttonLink: '/shop/winter',
@@ -37,12 +37,12 @@ const banners: Banner[] = [
 
 export function BannerCarousel() {
   return (
-    <Carousel className="w-full h-48">
+    <Carousel className="w-full h-90">
       <CarouselContent>
         {banners.map((banner, index) => (
           <CarouselItem key={index}>
             <div
-              className="relative h-48 bg-cover bg-center"
+              className="relative h-90 bg-cover bg-center"
               style={{ backgroundImage: `url(${banner.image})` }}
             >
               {/* Overlay for better text visibility */}
