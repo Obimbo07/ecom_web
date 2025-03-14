@@ -16,7 +16,7 @@ interface Banner {
 // Sample banner data (replace with your actual images)
 const banners: Banner[] = [
   {
-    image: '/sales.jpg', // Replace with actual image URL
+    image: 'sales.jpg', // Replace with actual image URL
     title: 'FASHION SALE',
     buttonText: 'Check',
     buttonLink: '/shop',
@@ -28,8 +28,8 @@ const banners: Banner[] = [
     buttonLink: '/shop/winter',
   },
   {
-    image: '/shirt-pic.jpg',
-    title: 'SUMMER DEALS',
+    image: 'images.jpeg',
+    title: 'Ramadhan Collection',
     buttonText: 'Shop Now',
     buttonLink: '/shop/summer',
   },
@@ -43,10 +43,10 @@ export function BannerCarousel() {
           <CarouselItem key={index}>
             <div
               className="relative h-90 bg-cover bg-center"
-              style={{ backgroundImage: `url(${banner.image})` }}
+              style={{ backgroundImage: `url(${banner.image})`, backgroundRepeat: 'no-repeat' }}
             >
               {/* Overlay for better text visibility */}
-              <div className="absolute inset-0 bg-black bg-opacity-10 flex items-center justify-center">
+              <div className="absolute inset-0  flex items-center justify-center">
                 <div className="text-center">
                   <h2 className="text-3xl font-bold text-white mb-4">{banner.title}</h2>
                   <a

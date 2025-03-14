@@ -19,20 +19,39 @@ interface Product {
   additional_images: { id: number; image: string | null; date: string }[];
 }
 
-export function ProductsCarousel() {
+interface ProductsCarouselProps {
+  categoryId?: number;
+}
+
+export function ProductsCarousel({ categoryId }: ProductsCarouselProps) {
   const [products, setProducts] = React.useState<Product[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await api.get('/api/products/');
+        setLoading(true);
+        const url = categoryId
+          ? `/api/products/category/${categoryId}/`
+          : '/api/products/';
+        const response = await api.get(url);
         setProducts(response.data.slice(0, 5));
       } catch (err) {
         console.error('Error fetching products:', err);
+      } finally {
+        setLoading(false);
       }
     };
     fetchProducts();
-  }, []);
+  }, [categoryId]);
+
+  if (loading) {
+    return <div className="text-center py-4">Loading products...</div>;
+  }
+
+  if (products.length === 0) {
+    return <div className="text-center py-4">No products available</div>;
+  }
 
   return (
     <Carousel className="w-full max-w-4xl">

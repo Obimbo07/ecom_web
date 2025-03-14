@@ -10,6 +10,9 @@ import Profile from './pages/Profile';
 import Orders from './components/profile/orders/Orders';
 import OrderDetails from './components/profile/orders/OrderDetails';
 import Checkout from './pages/Checkout';
+import DealsScreen from './pages/DealsScreen';
+import DealDetailScreen from './pages/DealsDetailScreen';
+import DiscountsScreen from './pages/DiscountsScreen';
 
 // Component to conditionally render Navbar
 const AppContent = () => {
@@ -32,6 +35,9 @@ const AppContent = () => {
           <Route path="/profile/orders" element={<Orders />} />
           <Route path="/profile/orders/:orderId" element={<OrderDetails />} />
           <Route path="/checkout/:orderid" element={<Checkout />} />
+          <Route path="/deals" element={<DealsScreen />} />
+          <Route path="/deals/:dealId" element={<DealDetailScreen />} />
+          <Route path="/discounts" element={<DiscountsScreen />} />
           {/* "<Route path="/profile/shipping-addresses" element={<ShippingAddresses />} />
           <Route path="/profile/payment-methods" element={<PaymentMethods />} />
           <Route path="/profile/promocodes" element={<Promocodes />} />
