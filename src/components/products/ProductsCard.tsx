@@ -2,6 +2,19 @@ import api from '@/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { useState } from 'react';
 import { FaStar } from 'react-icons/fa';
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer';
+import { Button } from '@/components/ui/button';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import parse from 'html-react-parser'; // Import html-react-parser
 
 // Define interfaces based on the ProductResponse and HolidayDeal structure
 interface HolidayDeal {
@@ -19,8 +32,13 @@ interface Product {
   price: number;
   old_price: number;
   image: string | null;
+  description: string;
+  specifications: string | null;
+  type: string;
+  stock_count: string;
+  life: string;
   additional_images: { id: number; image: string | null; date: string }[];
-  holiday_deals: HolidayDeal | null; // Single deal or null if inactive/multiple not supported here
+  holiday_deals: HolidayDeal | null;
 }
 
 interface ProductCardProps {
@@ -29,7 +47,6 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const [fetchDisabled, setFetchDisabled] = useState(false);
-  const [completeDisabled] = useState(false);
 
   // Regular discount (old_price vs price)
   const hasRegularDiscount = product.old_price > product.price;
@@ -69,7 +86,7 @@ export function ProductCard({ product }: ProductCardProps) {
     } catch (err: any) {
       console.error('Error adding to cart:', err);
     } finally {
-      setFetchDisabled(false); // Re-enable button after request completes
+      setFetchDisabled(false);
     }
   };
 
@@ -89,25 +106,15 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
           )}
           {/* Display discount badge: Holiday deal takes precedence */}
-          {hasHolidayDiscount ? (
+          {(hasHolidayDiscount || hasRegularDiscount) && (
             <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold py-1 px-2 rounded-full">
-              Deal -{holidayDeal.discount_percentage}%
+              {hasHolidayDiscount ? `Deal -${holidayDeal.discount_percentage}%` : `Deal -${regularDiscountPercentage}%`}
             </span>
-          ) : hasRegularDiscount ? (
-            <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold py-1 px-2 rounded-full">
-              -{regularDiscountPercentage}%
-            </span>
-          ) : null}
+          )}
         </div>
-        {/* Product Details */}
         <div className="p-4">
           <h3 className="text-lg font-semibold line-clamp-2">{product.title}</h3>
-          <div className="flex items-center gap-1 mb-2">
-            {renderStars(4.5)} {/* Placeholder; replace with actual rating */}
-            <span className="text-sm text-gray-600">(4.5)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Show discounted price if holiday deal, otherwise regular price/discount */}
+          <div className="flex items-center gap-2 mt-2">
             {hasHolidayDiscount ? (
               <>
                 <span className="text-lg font-bold text-green-600">
@@ -134,16 +141,131 @@ export function ProductCard({ product }: ProductCardProps) {
             <button
               onClick={handleAddToCart}
               disabled={fetchDisabled}
-              className="bg-green-500 p-2 rounded-xl hover:bg-green-600 disabled:bg-gray-400"
+              className="bg-green-500 p-2 rounded-xl hover:bg-green-600 disabled:bg-gray-400 w-full"
             >
               {fetchDisabled ? 'Added to Cart' : 'Add to Cart'}
             </button>
-            <button
-              disabled={completeDisabled}
-              className="bg-green-500 p-2 rounded-xl hover:bg-green-600 disabled:bg-gray-400"
-            >
-              {completeDisabled ? 'Complete' : 'View Product'}
-            </button>
+            <Drawer>
+              <DrawerTrigger asChild>
+                <button
+                  className="bg-green-500 p-2 rounded-xl hover:bg-green-600 w-full"
+                >
+                  View Product
+                </button>
+              </DrawerTrigger>
+              <DrawerContent className="max-h-[80vh] overflow-y-auto bg-white">
+                <DrawerHeader>
+                  <DrawerTitle className='text-xl'>{product.title}</DrawerTitle>
+                  
+                </DrawerHeader>
+                <div className="px-8">
+                  {/* Product Image with Navigation Arrows */}
+                  <div className="relative">
+                    <Carousel className="w-full max-w-md mx-auto">
+                      <CarouselContent>
+                        {product.image && (
+                          <CarouselItem>
+                            <img
+                              src={product.image}
+                              alt={product.title}
+                              className="w-full h-64 object-cover rounded-lg"
+                            />
+                          </CarouselItem>
+                        )}
+                        {product.additional_images.map((img) => (
+                          <CarouselItem key={img.id}>
+                            {img.image ? (
+                              <img
+                                src={img.image}
+                                alt={`${product.title} additional image`}
+                                className="w-full h-64 object-cover rounded-lg"
+                              />
+                            ) : (
+                              <div className="w-full h-64 flex items-center justify-center text-gray-500 bg-gray-200 rounded-lg">
+                                No image available
+                              </div>
+                            )}
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                      <CarouselPrevious className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700" />
+                      <CarouselNext className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700" />
+                    </Carousel>
+                  </div>
+
+                  {/* Pricing and Discount */}
+                  <div className="flex items-center gap-2">
+                    {hasHolidayDiscount ? (
+                      <>
+                        <span className="text-lg font-bold text-green-600">
+                          Ksh {displayPrice}
+                        </span>
+                        <span className="text-sm text-gray-500 line-through">
+                          Ksh {product.price}
+                        </span>
+                        <span className="bg-red-500 text-white text-xs font-bold py-1 px-2 rounded-full">
+                          Deal -{holidayDeal.discount_percentage}%
+                        </span>
+                      </>
+                    ) : hasRegularDiscount ? (
+                      <>
+                        <span className="text-lg font-bold text-green-600">
+                          Ksh {displayPrice}
+                        </span>
+                        <span className="text-sm text-gray-500 line-through">
+                          Ksh {product.old_price}
+                        </span>
+                        <span className="bg-red-500 text-white text-xs font-bold py-1 px-2 rounded-full">
+                          -{regularDiscountPercentage}%
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-lg font-bold text-green-600">
+                        Ksh {displayPrice}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Rating */}
+                  <div className="flex items-center gap-1">
+                    {renderStars(4.5)}
+                    <span className="text-sm text-gray-600">(4.5)</span>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <h4 className="text-md font-semibold">Description</h4>
+                    <div className="text-sm text-gray-600">
+                      {parse(product.description || 'No description available')}
+                    </div>
+                  </div>
+
+                  {/* Specifications
+                  {product.specifications && (
+                    <div>
+                      <h4 className="text-md font-semibold">Specifications</h4>
+                      <div className="text-sm text-gray-600">
+                        {parse(product.specifications)}
+                      </div>
+                    </div>
+                  )} */}
+                </div>
+                <DrawerFooter className="flex bg-white flex-col sm:flex-row gap-2">
+                  <Button
+                    onClick={handleAddToCart}
+                    disabled={fetchDisabled}
+                    className="w-full sm:w-auto bg-green-500 hover:bg-green-600"
+                  >
+                    {fetchDisabled ? 'Added to Cart' : 'Add to Cart'}
+                  </Button>
+                  <DrawerClose asChild>
+                    <Button variant="outline" className="w-full sm:w-auto">
+                      Close
+                    </Button>
+                  </DrawerClose>
+                </DrawerFooter>
+              </DrawerContent>
+            </Drawer>
           </div>
         </div>
       </CardContent>
