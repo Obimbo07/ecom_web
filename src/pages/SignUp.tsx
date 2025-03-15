@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 // import { useAuth } from '../context/AuthContext';
 // import api from '../api';
 import { FaFacebookF, FaInstagram, FaGoogle } from 'react-icons/fa'; // For social media icons
+import { useAuth } from '@/context/AuthContext';
 
 const SignUp = () => {
   const [username, setUsername] = useState<string>('');
@@ -10,13 +11,13 @@ const SignUp = () => {
   const [email, setEmail] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [rememberMe, setRememberMe] = useState<boolean>(false); // State for "Remember me"
-  // const { register } = useAuth();
+  const { register } = useAuth();
  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // const response =  register(username, email, password);
+      await register(username, email, password);
       navigate("/")
     } catch (err) {
       setError('Login failed. Check your credentials.');
@@ -50,14 +51,14 @@ const SignUp = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
-            placeholder="Email Address or username"
+            placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="w-full p-3 bg-white rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <input
             type="text"
-            placeholder="Email Addres"
+            placeholder="Email Address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full p-3 bg-white rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"

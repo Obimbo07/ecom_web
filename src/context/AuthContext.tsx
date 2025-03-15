@@ -18,15 +18,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // const [email, setEmail] = useState<string>('');
   // const [error, setError] = useState<string>('');
   const login = () => setIsAuthenticated(true);
-  const logout = () => setIsAuthenticated(false);
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
+    setIsAuthenticated(false)
+  };
 
-  const register =  async (username: any, email: any, password: any) => {
+  const register = async (username: any, email: any, password: any) => {
     try {
-      const response = await api.post('/users/users/register', { username, email, password });
-      console.log(response);
-     return response;
-    } catch (err) {
-      console.log('Login failed. Check your credentials.');
+      const response = await api.post('/users/register/', { username, email, password });
+      return response.data;
+    } catch (err: any) {
+      if (err.response) {
+        throw new Error(err.response.data.detail || 'Registration failed.');
+      }
+      throw new Error('Network error.');
     }
   };
 
