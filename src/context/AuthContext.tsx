@@ -24,15 +24,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsAuthenticated(false)
   };
 
-  const register = async (username: any, email: any, password: any) => {
+  const register = async (username: string, email: string, password: string) => {
     try {
       const response = await api.post('/users/register/', { username, email, password });
-      return response.data;
+      console.log(response, 'response');
+      // On success, no need to throw; the calling function can handle navigation
     } catch (err: any) {
       if (err.response) {
-        throw new Error(err.response.data.detail || 'Registration failed.');
+        // Extract the specific error message from the backend's 'detail' field
+        const errorMessage = err.response.data.detail || 'Registration failed due to an unknown error.';
+        throw new Error(errorMessage); // Throw the specific error
       }
-      throw new Error('Network error.');
+      throw new Error('Network error. Please check your connection.'); // Generic network error
     }
   };
 
