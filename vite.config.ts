@@ -11,7 +11,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       injectRegister: 'auto', 
       devOptions: {
         enabled: true
@@ -23,10 +23,17 @@ export default defineConfig({
         cleanupOutdatedCaches: false,
       },
       manifest: {
-        name: 'Moha Fashion Store',
+        name: 'Moha Fashion Collection Store',
         short_name: 'Moha Fashion',
         description: 'Wholesale and Retail for Apparel and Clothing Best Deals under one roof',
         theme_color: '#ffffff',
+        icons: [
+          {
+            src: 'logo.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+        ],
       }
   })
   ],
