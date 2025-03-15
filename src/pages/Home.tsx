@@ -5,6 +5,7 @@ import HomeCarousel from '@/components/carousel/HomeCarousel';
 import ProductsCarousel from '@/components/products/ProductsCarousel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import api from '@/api';
+import AdvertCarousel from '@/components/carousel/AdvertCarousel';
 
 interface Category {
   id: number;
@@ -29,9 +30,9 @@ const Home = () => {
   const [loadingDeals, setLoadingDeals] = useState(true);
   const navigate = useNavigate();
 
-  // if (!isAuthenticated) {
-  //   return <Navigate to="/login" replace />;
-  // }
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -104,7 +105,7 @@ const Home = () => {
 
       {/* Featured Products */}
       <div className="my-6 px-4">
-        <h2 className="text-xl font-semibold mb-4">Featured Products</h2>
+        <h2 className="text-xl font-semibold mb-4">New Arrivals</h2>
         <ProductsCarousel />
       </div>
 
@@ -133,6 +134,26 @@ const Home = () => {
             </TabsContent>
           ))}
         </Tabs>
+      </div>
+
+      <div className="my-6 px-4">
+        <AdvertCarousel />
+      </div>
+
+
+      <div className="my-6 px-4">
+        <h2 className="text-xl font-semibold mb-4">Weekly best price</h2>
+        <ProductsCarousel />
+      </div>
+
+      <div className="my-6 px-4">
+        <h2 className="text-xl font-semibold mb-4">Most Selling</h2>
+        <ProductsCarousel />
+      </div>
+
+      <div className="my-6 px-4">
+        <h2 className="text-xl font-semibold mb-4">Shop by brand</h2>
+        <ProductsCarousel />
       </div>
     </div>
   );

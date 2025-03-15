@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create Axios instance
 const api = axios.create({
-  baseURL: 'http://localhost:8000/', // Adjust for production later
+  baseURL: 'https://admin.mohacollection.co.ke', // Adjust for production later
   headers: {
     'Content-Type': 'application/json', // Explicitly set for clarity
   },
@@ -11,7 +11,7 @@ const api = axios.create({
 // Request interceptor to include the access token
 api.interceptors.request.use(
   (config) => {
-    const accessToken = localStorage.getItem('access_token');
+    const accessToken = localStorage.getItem('token');
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
@@ -36,12 +36,12 @@ api.interceptors.response.use(
         });
 
         const { access } = response.data;
-        localStorage.setItem('access_token', access);
+        localStorage.setItem('token', access);
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return api(originalRequest); // Retry with new token
       } catch (refreshError) {
         console.error('Refresh token failed:', refreshError);
-        localStorage.removeItem('access_token');
+        localStorage.removeItem('token');
         localStorage.removeItem('refresh_token');
         window.location.href = '/login';
         return Promise.reject(refreshError);

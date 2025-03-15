@@ -9,15 +9,30 @@ import {
 import ProductCard from './ProductsCard';
 import api from '../../api';
 
+interface HolidayDeal {
+  deal_id: string;
+  name: string;
+  discount_percentage: number;
+  discounted_price: number;
+  start_date: string;
+  end_date: string;
+}
+
 interface Product {
   id: number;
   title: string;
   price: number;
   old_price: number;
   image: string | null;
-  rating: number;
+  description: string;
+  specifications: string | null;
+  type: string;
+  stock_count: string;
+  life: string;
   additional_images: { id: number; image: string | null; date: string }[];
+  holiday_deals: HolidayDeal | null;
 }
+
 
 interface ProductsCarouselProps {
   categoryId?: number;

@@ -4,13 +4,29 @@ import api from '../api';
 import ProductCard from '../components/products/ProductsCard'; // Reuse the ProductCard component
 
 // Define Product interface based on ProductResponse
+// Define interfaces based on the ProductResponse and HolidayDeal structure
+interface HolidayDeal {
+  deal_id: string;
+  name: string;
+  discount_percentage: number;
+  discounted_price: number;
+  start_date: string;
+  end_date: string;
+}
+
 interface Product {
   id: number;
   title: string;
   price: number;
   old_price: number;
   image: string | null;
+  description: string;
+  specifications: string | null;
+  type: string;
+  stock_count: string;
+  life: string;
   additional_images: { id: number; image: string | null; date: string }[];
+  holiday_deals: HolidayDeal | null;
 }
 
 const CategoryProducts = () => {

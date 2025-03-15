@@ -13,14 +13,29 @@ import Checkout from './pages/Checkout';
 import DealsScreen from './pages/DealsScreen';
 import DealDetailScreen from './pages/DealsDetailScreen';
 import DiscountsScreen from './pages/DiscountsScreen';
+import { useEffect, useState } from 'react';
 
 // Component to conditionally render Navbar
 const AppContent = () => {
   const location = useLocation();
-
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
   // Hide navbar on /login and /register routes
   const hideNavbar = location.pathname === '/login' || location.pathname === '/register';
+  
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (event: any) => {
+      event.preventDefault(); // Prevent the default browser prompt
+      setDeferredPrompt(event); // Store the event for later use
+    };
 
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Cleanup on component unmount
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+  console.log(deferredPrompt);
   return (
     <div className=" min-h-screen flex flex-col">
       <main className="flex-1">
