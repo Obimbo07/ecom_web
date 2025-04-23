@@ -14,7 +14,10 @@ import DealsScreen from './pages/DealsScreen';
 import DealDetailScreen from './pages/DealsDetailScreen';
 import DiscountsScreen from './pages/DiscountsScreen';
 import { useEffect, useState } from 'react';
-
+import ShippingAddressScreen from './components/profile/address/ShippingAddressScreen';
+import PaymentMethodScreen from './components/profile/payments/PaymentMethodScreen';
+import SettingsScreen from './components/profile/settings/SettingsScreen';
+import Reviews from './components/profile/reviews/Reviews';
 // Component to conditionally render Navbar
 const AppContent = () => {
   const location = useLocation();
@@ -53,11 +56,11 @@ const AppContent = () => {
           <Route path="/deals" element={<DealsScreen />} />
           <Route path="/deals/:dealId" element={<DealDetailScreen />} />
           <Route path="/discounts" element={<DiscountsScreen />} />
-          {/* "<Route path="/profile/shipping-addresses" element={<ShippingAddresses />} />
-          <Route path="/profile/payment-methods" element={<PaymentMethods />} />
-          <Route path="/profile/promocodes" element={<Promocodes />} />
+          <Route path="/profile/shipping-addresses" element={<ShippingAddressScreen />} />
+          <Route path="/profile/payment-methods" element={<PaymentMethodScreen />} />
+           {/*<Route path="/profile/promocodes" element={<Promocodes />} /> */} 
           <Route path="/profile/reviews" element={<Reviews />} />
-          <Route path="/profile/settings" element={<Settings />} />" */}
+          <Route path="/profile/settings" element={<SettingsScreen />} />" 
         </Routes>
       </main>
       {!hideNavbar && <Navbar />}
