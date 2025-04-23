@@ -5,20 +5,21 @@ import api from '../api';
 import { FaFacebookF, FaInstagram, FaGoogle } from 'react-icons/fa';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [loading, setLoading] = useState(false); // New loading state
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     setError(''); // Clear previous errors
     setLoading(true); // Start loading
     try {
-      const response = await api.post('users/login/', { username, password });
+      const response = await api.post('users/login/', { email, password });
+      console.log(response, 'api sign response')
       localStorage.setItem('token', response.data.access_token);
       localStorage.setItem('refresh_token', response.data.refresh_token);
       login();
@@ -30,7 +31,7 @@ const Login = () => {
     }
   };
 
-  const handleSocialLogin = (provider) => {
+  const handleSocialLogin = (provider: string) => {
     console.log(`Logging in with ${provider}`);
   };
 
@@ -49,12 +50,12 @@ const Login = () => {
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
-            type="text"
-            placeholder="Email Address or username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            type="email"
+            placeholder="Email Address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className="w-full p-3 bg-white rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={loading} // Optional
+            disabled={loading}
           />
           <input
             type="password"
@@ -62,7 +63,7 @@ const Login = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full p-3 bg-white rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={loading} // Optional
+            disabled={loading}
           />
           <div className="flex items-center justify-between">
             <label className="flex items-center text-white">
@@ -71,7 +72,7 @@ const Login = () => {
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
                 className="mr-2"
-                disabled={loading} // Optional
+                disabled={loading}
               />
               Remember me
             </label>
@@ -81,7 +82,7 @@ const Login = () => {
             className={`w-full bg-white text-black py-3 rounded-full font-semibold transition ${
               loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200'
             }`}
-            disabled={loading} // Disable button
+            disabled={loading}
           >
             {loading ? 'Signing In...' : 'SIGN IN'} {/* Change text */}
           </button>

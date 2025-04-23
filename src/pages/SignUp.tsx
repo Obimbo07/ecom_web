@@ -13,21 +13,21 @@ const SignUp = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     setError(''); // Clear previous errors
     setLoading(true); // Start loading
     try {
       await register(username, email, password);
       navigate('/');
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message); // Set the specific error message from the thrown Error
     } finally {
       setLoading(false); // Stop loading
     }
   };
 
-  const handleSocialLogin = (provider) => {
+  const handleSocialLogin = (provider: string) => {
     console.log(`Logging in with ${provider}`);
   };
 
