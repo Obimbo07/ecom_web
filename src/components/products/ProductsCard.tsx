@@ -1,7 +1,7 @@
 import api from '@/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { useState } from 'react';
-import { FaStar } from 'react-icons/fa';
+import { FaStar, FaShoppingCart, FaEye, FaEllipsisH, FaCheck } from 'react-icons/fa'; // Added FaEllipsisH and FaCheck
 import {
   Drawer,
   DrawerClose,
@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import parse from 'html-react-parser'; // Import html-react-parser
+import parse from 'html-react-parser';
 
 // Define interfaces based on the ProductResponse and HolidayDeal structure
 interface HolidayDeal {
@@ -85,7 +85,8 @@ export function ProductCard({ product }: ProductCardProps) {
     } catch (err: any) {
       console.error('Error adding to cart:', err);
     } finally {
-      setFetchDisabled(false);
+      // Keep the button in the "success" state for a short time before resetting
+      setTimeout(() => setFetchDisabled(false), 2000);
     }
   };
 
@@ -140,22 +141,31 @@ export function ProductCard({ product }: ProductCardProps) {
             <button
               onClick={handleAddToCart}
               disabled={fetchDisabled}
-              className="bg-green-500 p-2 rounded-xl hover:bg-green-600 disabled:bg-gray-400 w-full"
+              className="bg-green-500 p-2 rounded-xl hover:bg-green-600 disabled:bg-gray-400 w-full flex items-center justify-center space-x-2"
+              aria-label={fetchDisabled ? 'Product added to cart' : 'Add product to cart'}
             >
-              {fetchDisabled ? 'Added to Cart' : 'Add to Cart'}
+              {fetchDisabled ? (
+                <>
+                  <FaEllipsisH className="text-white text-lg animate-pulse" />
+                  <FaCheck className="text-white text-lg" />
+                </>
+              ) : (
+                <FaShoppingCart className="text-white text-lg hover:text-gray-200 transition-colors" />
+              )}
             </button>
             <Drawer>
               <DrawerTrigger asChild>
                 <button
-                  className="bg-green-500 p-2 rounded-xl hover:bg-green-600 w-full"
+                  className="bg-green-500 p-2 rounded-xl hover:bg-green-600 w-full flex items-center justify-center space-x-2"
+                  aria-label="View product details"
                 >
-                  View Product
+                  <FaEye className="text-white text-lg hover:text-gray-200 transition-colors" />
+                
                 </button>
               </DrawerTrigger>
               <DrawerContent className="max-h-[80vh] overflow-y-auto bg-white">
                 <DrawerHeader>
-                  <DrawerTitle className='text-xl'>{product.title}</DrawerTitle>
-                  
+                  <DrawerTitle className="text-xl">{product.title}</DrawerTitle>
                 </DrawerHeader>
                 <div className="px-8">
                   {/* Product Image with Navigation Arrows */}
@@ -238,24 +248,22 @@ export function ProductCard({ product }: ProductCardProps) {
                       {parse(product.description || 'No description available')}
                     </div>
                   </div>
-
-                  {/* Specifications
-                  {product.specifications && (
-                    <div>
-                      <h4 className="text-md font-semibold">Specifications</h4>
-                      <div className="text-sm text-gray-600">
-                        {parse(product.specifications)}
-                      </div>
-                    </div>
-                  )} */}
                 </div>
                 <DrawerFooter className="flex bg-white flex-col sm:flex-row gap-2">
                   <Button
                     onClick={handleAddToCart}
                     disabled={fetchDisabled}
-                    className="w-full sm:w-auto bg-green-500 hover:bg-green-600"
+                    className="w-full sm:w-auto bg-green-500 hover:bg-green-600 flex items-center justify-center space-x-2"
+                    aria-label={fetchDisabled ? 'Product added to cart' : 'Add product to cart'}
                   >
-                    {fetchDisabled ? 'Added to Cart' : 'Add to Cart'}
+                    {fetchDisabled ? (
+                      <>
+                        <FaEllipsisH className="text-white text-lg animate-pulse" />
+                        <FaCheck className="text-white text-lg" />
+                      </>
+                    ) : (
+                      <FaShoppingCart className="text-white text-lg hover:text-gray-200 transition-colors" />
+                    )}
                   </Button>
                   <DrawerClose asChild>
                     <Button variant="outline" className="w-full sm:w-auto">

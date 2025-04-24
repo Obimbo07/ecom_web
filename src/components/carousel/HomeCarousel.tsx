@@ -16,10 +16,10 @@ interface Banner {
 // Sample banner data (replace with your actual images)
 const banners: Banner[] = [
   {
-    image: 'sale.jpg', // Replace with actual image URL
-    title: 'Upto 50% off',
-    buttonText: 'Check',
-    buttonLink: '/shop',
+    image: 'sales.jpg', // Replace with actual image URL
+    title: 'HOT DEALS',
+    buttonText: 'Shop Now',
+    buttonLink: '/deals',
   },
   {
     image: 'IMG-20250222-WA0084.jpg',
@@ -27,12 +27,7 @@ const banners: Banner[] = [
     buttonText: 'Explore',
     buttonLink: '/shop/shirts',
   },
-  {
-    image: 'images.jpeg',
-    title: 'Ramadhan Collection',
-    buttonText: 'Shop Now',
-    buttonLink: '/shop/summer',
-  },
+  
 ];
 
 export function BannerCarousel() {
@@ -62,9 +57,9 @@ export function BannerCarousel() {
           </CarouselItem>
         ))}
       </CarouselContent>
-      <CarouselPrevious className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700" />
+      {/* <CarouselPrevious className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700" />
       <CarouselNext className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700" />
-    </Carousel>
+   */} </Carousel> 
   );
 }
 
