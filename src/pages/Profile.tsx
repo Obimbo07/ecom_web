@@ -4,10 +4,13 @@ import api from '../api';
 import { FaArrowRight, FaUserAlt } from 'react-icons/fa';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
+
 // Define interfaces based on API responses
 interface User {
   username: string;
   email: string;
+  image: string;
+  profile: { bio: string; full_name: string; image: string | null; phone: number; verified: boolean };
 }
 
 interface Order {
@@ -38,7 +41,7 @@ interface ShippingAddress {
 
 interface PaymentMethod {
   id: number;
-  type: string;
+  method_type: string;
   last_four: string;
 }
 
@@ -50,32 +53,29 @@ const Profile = () => {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
-  const {logout} = useAuth();
+  const [imageError, setImageError] = useState(false); // New state for image load failure
+  const { logout } = useAuth();
   const navigate = useNavigate();
-  
+
   // Fetch user data
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
         setLoading(true);
-        // Fetch user details (mocked via get_current_user dependency)
-        const userResponse = await api.get('users/me/'); // Assuming an endpoint for user details
+
+        const userResponse = await api.get('users/me/');
         setUser(userResponse.data);
 
-        // Fetch orders
         const ordersResponse = await api.get('api/user/orders/');
         setOrders(ordersResponse.data);
 
-        // Fetch reviews
         const reviewsResponse = await api.get('api/users/reviews/');
         setReviews(reviewsResponse.data);
 
-        // Fetch shipping addresses (mocked; replace with actual endpoint)
-        const shippingResponse = await api.get('users/shipping-addresses'); // Placeholder
+        const shippingResponse = await api.get('users/shipping-addresses');
         setShippingAddresses(shippingResponse.data);
 
-        // Fetch payment methods (mocked; replace with actual endpoint)
-        const paymentResponse = await api.get('users/payment-methods'); // Placeholder
+        const paymentResponse = await api.get('users/payment-methods');
         setPaymentMethods(paymentResponse.data);
       } catch (err: any) {
         setError(err.response?.data?.detail || 'Failed to fetch profile data.');
@@ -89,8 +89,15 @@ const Profile = () => {
   const handleLogOutClick = () => {
     logout();
     navigate('/');
-  }
+  };
 
+  // Helper function to normalize image URL
+  const getImageUrl = (imagePath: string | null): string | undefined => {
+    if (!imagePath) return undefined;
+    if (imagePath.startsWith('http')) return imagePath;
+    return `${import.meta.env.VITE_API_URL}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+  };
+  
   if (loading) {
     return <div className="text-center py-10">Loading...</div>;
   }
@@ -115,7 +122,16 @@ const Profile = () => {
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
         <div className="flex items-center space-x-4">
           <div className="w-16 h-16 bg-gray-300 rounded-full overflow-hidden">
-            <FaUserAlt className="w-16 h-16 text-gray-400" />
+            {user?.profile?.image && !imageError ? (
+              <img
+                src={getImageUrl(user.profile.image)}
+                alt="Profile"
+                className="w-full h-full object-cover"
+                onError={() => setImageError(true)} // Switch to icon if image fails
+              />
+            ) : (
+              <FaUserAlt className="w-16 h-16 text-gray-400" />
+            )}
           </div>
           <div>
             <h3 className="text-xl font-semibold">{user?.username || 'Loading...'}</h3>
@@ -123,12 +139,11 @@ const Profile = () => {
           </div>
         </div>
       </div>
-      
+
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <Button
-         className='bg-red-500 text-white'
-         onClick={handleLogOutClick}
-        >Sign Out</Button>
+        <Button className="bg-red-500 text-white" onClick={handleLogOutClick}>
+          Sign Out
+        </Button>
       </div>
 
       {/* Profile Sections */}
@@ -141,7 +156,7 @@ const Profile = () => {
               <p className="text-gray-600">Already have {orders.length} orders</p>
             </div>
             <span className="text-gray-400">
-                <FaArrowRight />
+              <FaArrowRight />
             </span>
           </div>
         </Link>
@@ -154,7 +169,7 @@ const Profile = () => {
               <p className="text-gray-600">{shippingAddresses.length} addresses</p>
             </div>
             <span className="text-gray-400">
-                <FaArrowRight />
+              <FaArrowRight />
             </span>
           </div>
         </Link>
@@ -165,24 +180,26 @@ const Profile = () => {
             <div>
               <h4 className="text-lg font-semibold">Payment methods</h4>
               <p className="text-gray-600">
-                {paymentMethods.length > 0 ? paymentMethods[0].type + ' *' + paymentMethods[0].last_four : 'No methods'}
+                {paymentMethods.length > 0
+                  ? `${paymentMethods[0].method_type} *${paymentMethods[0].last_four}`
+                  : 'No methods'}
               </p>
             </div>
             <span className="text-gray-400">
-                <FaArrowRight />
+              <FaArrowRight />
             </span>
           </div>
         </Link>
 
         {/* Promocodes */}
-        <Link to="/profile/promocodes" className="block bg-white rounded-lg shadow-md p-4">
+        <Link to="#" className="block bg-white rounded-lg shadow-md p-4">
           <div className="flex justify-between items-center">
             <div>
               <h4 className="text-lg font-semibold">Promocodes</h4>
-              <p className="text-gray-600">You have special promocodes</p>
+              <p className="text-gray-600">Coming Soon</p>
             </div>
             <span className="text-gray-400">
-                <FaArrowRight />
+              <FaArrowRight />
             </span>
           </div>
         </Link>
@@ -195,7 +212,7 @@ const Profile = () => {
               <p className="text-gray-600">Reviews for {reviews.length} items</p>
             </div>
             <span className="text-gray-400">
-                <FaArrowRight />
+              <FaArrowRight />
             </span>
           </div>
         </Link>
@@ -208,7 +225,7 @@ const Profile = () => {
               <p className="text-gray-600">Notifications, password</p>
             </div>
             <span className="text-gray-400">
-                <FaArrowRight />
+              <FaArrowRight />
             </span>
           </div>
         </Link>
