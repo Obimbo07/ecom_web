@@ -57,9 +57,9 @@ export function BannerCarousel() {
           </CarouselItem>
         ))}
       </CarouselContent>
-      {/* <CarouselPrevious className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700" />
+       <CarouselPrevious className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700" />
       <CarouselNext className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700" />
-   */} </Carousel> 
+    </Carousel> 
   );
 }
 
