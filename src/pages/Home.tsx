@@ -24,16 +24,11 @@ interface HolidayDeal {
 }
 
 const Home = () => {
-  const { isAuthenticated } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [deals, setDeals] = useState<HolidayDeal[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingDeals, setLoadingDeals] = useState(true);
   const navigate = useNavigate();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
 
   useEffect(() => {
     const fetchCategories = async () => {
