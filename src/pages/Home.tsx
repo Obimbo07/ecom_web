@@ -15,6 +15,7 @@ interface Category {
 
 interface HolidayDeal {
   deal_id: string;
+  deal_image: string;
   name: string;
   discount_percentage: number;
   start_date: string;
@@ -23,16 +24,11 @@ interface HolidayDeal {
 }
 
 const Home = () => {
-  const { isAuthenticated } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [deals, setDeals] = useState<HolidayDeal[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [loadingDeals, setLoadingDeals] = useState(true);
   const navigate = useNavigate();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -51,6 +47,7 @@ const Home = () => {
       try {
         setLoadingDeals(true);
         const response = await api.get('/api/holiday-deals/');
+        console.log(response.data, 'response data');	
         setDeals(response.data);
       } catch (err) {
         console.error('Error fetching deals:', err);
@@ -70,14 +67,11 @@ const Home = () => {
   // Define static link and dynamic deal links
   const links = [
     { title: 'Best Discount', icon: 'v1036-06.jpg', url: '/discounts' },
-    ...(deals.length > 0
-      ? [
-          { title: deals[1]?.name || 'Ramadhan Kareem', icon: 'ramadhan_campaign.gif', url: `/deals/${deals[1]?.deal_id}` },
-          ...(deals.length > 1
-            ? [{ title: deals[0]?.name || 'Deals of the Day', icon: 'DOD_2_cfa99cf6fa.avif', url: `/deals/${deals[0]?.deal_id}` }]
-            : [])
-        ]
-      : [])
+    ...deals.map((deal) => ({
+      title: deal.name,
+      icon: deal.deal_image,
+      url: `/deals/${deal.deal_id}`
+    }))
   ];
 
   return (
@@ -95,7 +89,20 @@ const Home = () => {
               onClick={() => navigate(link.url)}
             >
               <span className="text-3xl mb-2">
-                <img src={link.icon} alt={link.title} className="w-full h-auto" />
+                {link.icon ? (
+                <img 
+                src={link.icon} 
+                alt={link.title} 
+                className="w-full h-auto"
+                loading="lazy"
+                />
+                ) : (
+                  <img
+                    src="v1036-06.jpg"
+                    alt="Placeholder"
+                    className="w-full h-32 object-cover rounded-md mb-2"
+                  />
+                )}
               </span>
               <p className="text-sm text-center">{link.title}</p>
             </div>
