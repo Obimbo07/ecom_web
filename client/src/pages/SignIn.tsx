@@ -18,15 +18,16 @@ const Login = () => {
     e.preventDefault();
     dispatch(loginStart());
     try {
-      const response = await api.post('users/login/', { email, password });
+      const response = await api.post('users/login/', { username: email, password });
       console.log(response, 'api sign response');
       localStorage.setItem('token', response.data.access_token);
       localStorage.setItem('refresh_token', response.data.refresh_token);
       dispatch(loginSuccess({
-        id: response.data.user_id, // Assuming user_id is returned
-        username: response.data.username, // Assuming username is returned
-        email: email,
+        // id: response.data.user_id, // Assuming user_id is returned
+        // username: response.data.username, // Assuming username is returned
+        // email: email,
         token: response.data.access_token,
+        refresh: response.data.refresh_token,
       }));
       navigate('/');
     } catch (err: any) {
@@ -54,7 +55,7 @@ const Login = () => {
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
-            type="email"
+            type="username"
             placeholder="Email Address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}

@@ -11,6 +11,7 @@ import {
   clearCart,
 } from '../store/slices/cartSlice';
 import { placeOrderStart, placeOrderSuccess, placeOrderFailure } from '../store/slices/orderSlice';
+import { setCart } from '../store/slices/cartSlice';
 
 interface Product {
   id: string;
@@ -36,14 +37,16 @@ const Cart = () => {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+
   // This useEffect will now primarily fetch product details for items already in Redux cart
   useEffect(() => {
     const fetchProductDetailsForCart = async () => {
       setLoading(true);
       setError(null);
+      // Inside Cart.tsx, after fetching all product details:
       const updatedCartItems = await Promise.all(
         cartItems.map(async (item) => {
-          if (!item.image || !item.name) { // Check if product details are missing
+          if (!item.image || !item.name) {
             try {
               const productResponse = await api.get(`api/products/${item.id}`);
               const productData: Product = productResponse.data;
@@ -54,13 +57,15 @@ const Cart = () => {
                 price: productData.price,
               };
             } catch (err) {
-              console.error(`Error fetching product ${item.id}:`, err);
               return { ...item, name: 'Unknown Product', image: null, price: 0 };
             }
           }
           return item;
         })
       );
+      // Optionally update Redux with full details:
+      dispatch(setCart(updatedCartItems));
+      setLoading(false);
       // If you want to update the cart items in Redux with full product details, you'd dispatch an action here.
       // For now, we'll assume the cartSlice only stores basic info and product details are fetched on demand.
       // If cartSlice was designed to hold full product details, this logic would be different.
@@ -72,7 +77,7 @@ const Cart = () => {
     } else {
       setLoading(false);
     }
-  }, [cartItems, dispatch]);
+  }, [dispatch]);
 
 const handleIncrementQuantity = (item: CartItem) => {
     dispatch(addItemToCart({ ...item, quantity: 1, image: item.image || "" })); // Add 1 to quantity

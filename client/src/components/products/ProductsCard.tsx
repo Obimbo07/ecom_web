@@ -1,6 +1,6 @@
 import api from '@/api';
 import { Card, CardContent } from '@/components/ui/card';
-import { useState } from 'react';
+import { use, useState } from 'react';
 import { FaStar, FaShoppingCart, FaEye, FaEllipsisH, FaCheck } from 'react-icons/fa'; // Added FaEllipsisH and FaCheck
 import {
   Drawer,
@@ -14,6 +14,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import parse from 'html-react-parser';
+import { useDispatch } from 'react-redux';
+import { addItemToCart } from '@/store/slices/cartSlice';
 
 // Define interfaces based on the ProductResponse and HolidayDeal structure
 interface HolidayDeal {
@@ -46,6 +48,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const [fetchDisabled, setFetchDisabled] = useState(false);
+  const dispatch = useDispatch();
 
   // Regular discount (old_price vs price)
   const hasRegularDiscount = product.old_price > product.price;
@@ -77,11 +80,15 @@ export function ProductCard({ product }: ProductCardProps) {
   const handleAddToCart = async () => {
     setFetchDisabled(true);
     try {
-      const addToCartResponse = await api.post(`/api/cart/`, {
-        product_id: product.id,
-        quantity: 1,
-      });
-      console.log(addToCartResponse.data, 'cart response');
+      dispatch(
+        addItemToCart({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: 1,
+          image: product.imageUrl || '', // or product.image
+          })
+      );
     } catch (err: any) {
       console.error('Error adding to cart:', err);
     } finally {

@@ -7,6 +7,7 @@ import { AuthProvider } from './context/AuthContext';
 import { Provider } from 'react-redux';
 import { store, persistor } from './store';
 import { PersistGate } from 'redux-persist/integration/react';
+import CartLoader from './context/CartLoader.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -14,6 +15,7 @@ createRoot(document.getElementById('root')!).render(
       <PersistGate loading={null} persistor={persistor}>
         <AuthProvider>
           <BrowserRouter>
+            <CartLoader />
             <App />
           </BrowserRouter>
         </AuthProvider>
