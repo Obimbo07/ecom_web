@@ -1,29 +1,37 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaFacebookF, FaInstagram, FaGoogle } from 'react-icons/fa';
-import { useAuth } from '@/context/AuthContext';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState, AppDispatch } from '../store';
+import { loginStart, loginSuccess, loginFailure } from '../store/slices/authSlice';
+import api from '../api'; // Assuming you still need api for registration
 
 const SignUp = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const dispatch: AppDispatch = useDispatch();
+  const { loading, error } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
-    setError(''); // Clear previous errors
-    setLoading(true); // Start loading
+    dispatch(loginStart()); // Use loginStart for registration as well, as it's an auth process
     try {
-      await register(username, email, password);
+      const response = await api.post('/users/register/', { username, email, password });
+      console.log(response, 'registration response');
+      // Assuming successful registration also logs the user in or provides a token
+      dispatch(loginSuccess({
+        id: response.data.user_id, // Assuming user_id is returned
+        username: username,
+        email: email,
+        token: response.data.access_token, // Assuming token is returned
+      }));
       navigate('/');
     } catch (err: any) {
-      setError(err.message); // Set the specific error message from the thrown Error
-    } finally {
-      setLoading(false); // Stop loading
+      const errorMessage = err.response?.data?.detail || 'Registration failed due to an unknown error.';
+      dispatch(loginFailure(errorMessage));
     }
   };
 

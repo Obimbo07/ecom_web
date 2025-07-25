@@ -3,23 +3,27 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { FaArrowRight, FaUserAlt } from 'react-icons/fa';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/context/AuthContext';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState, AppDispatch } from '../store';
+import { logout } from '../store/slices/authSlice';
+import { fetchOrdersStart, fetchOrdersSuccess, fetchOrdersFailure } from '../store/slices/orderSlice';
 
 // Define interfaces based on API responses
-interface User {
+interface UserProfile {
   username: string;
   email: string;
   image: string;
-  profile: { bio: string; full_name: string; image: string | null; phone: number; verified: boolean };
+  profile: { bio: string; full_name: string; image: string | null; phone: number; verified: boolean } | null;
 }
 
 interface Order {
-  id: number;
-  total_amount: number;
-  status: string;
-  payment_status: string;
-  created_at: string;
-  items: { product_title: string; quantity: number; price: number }[];
+  id: string;
+  userId: string;
+  items: any[];
+  totalAmount: number;
+  status: "pending" | "completed" | "cancelled";
+  createdAt: string;
+  payment_status: "paid" | "unpaid";
 }
 
 interface Review {
@@ -45,49 +49,79 @@ interface PaymentMethod {
   last_four: string;
 }
 
+interface PaymentMethod {
+  id: number;
+  method_type: string;
+  last_four: string;
+}
+
+interface PaymentMethod {
+  id: number;
+  method_type: string;
+  last_four: string;
+}
+
+interface PaymentMethod {
+  id: number;
+  method_type: string;
+  last_four: string;
+}
+
 const Profile = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const dispatch: AppDispatch = useDispatch();
+  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { orders, loading, error } = useSelector((state: RootState) => state.order) as { orders: Order[]; loading: boolean; error: string | null };
+
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [shippingAddresses, setShippingAddresses] = useState<ShippingAddress[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
-  const [imageError, setImageError] = useState(false); // New state for image load failure
-  const { logout } = useAuth();
+  const [loadingLocal, setLoadingLocal] = useState<boolean>(true);
+  const [errorLocal, setErrorLocal] = useState<string>('');
+  const [imageError, setImageError] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch user data
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
-        setLoading(true);
-
+        setLoadingLocal(true);
+        // Fetch user profile data
         const userResponse = await api.get('users/me/');
-        setUser(userResponse.data);
+        setUserProfile(userResponse.data as UserProfile);
 
-        const ordersResponse = await api.get('api/user/orders/');
-        setOrders(ordersResponse.data);
+        // Fetch orders using Redux action
+        dispatch(fetchOrdersStart());
+        try {
+          const ordersResponse = await api.get('api/user/orders/');
+          dispatch(fetchOrdersSuccess(ordersResponse.data as any));
+        } catch (err: any) {
+          dispatch(fetchOrdersFailure(err.response?.data?.detail || 'Failed to fetch orders.'));
+        }
 
         const reviewsResponse = await api.get('api/users/reviews/');
-        setReviews(reviewsResponse.data);
+        setReviews(reviewsResponse.data as Review[]);
 
         const shippingResponse = await api.get('users/shipping-addresses');
-        setShippingAddresses(shippingResponse.data);
+        setShippingAddresses(shippingResponse.data as ShippingAddress[]);
 
         const paymentResponse = await api.get('users/payment-methods');
-        setPaymentMethods(paymentResponse.data);
+        setPaymentMethods(paymentResponse.data as PaymentMethod[]);
       } catch (err: any) {
-        setError(err.response?.data?.detail || 'Failed to fetch profile data.');
+        setErrorLocal(err.response?.data?.detail || 'Failed to fetch profile data.');
       } finally {
-        setLoading(false);
+        setLoadingLocal(false);
       }
     };
-    fetchProfileData();
-  }, []);
+    if (isAuthenticated) {
+      fetchProfileData();
+    } else {
+      setLoadingLocal(false);
+      setErrorLocal('User not authenticated.');
+    }
+  }, [isAuthenticated, dispatch]);
 
   const handleLogOutClick = () => {
-    logout();
+    dispatch(logout());
     navigate('/');
   };
 
@@ -98,12 +132,12 @@ const Profile = () => {
     return `${import.meta.env.VITE_API_URL}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
   };
   
-  if (loading) {
+  if (loadingLocal || loading) {
     return <div className="text-center py-10">Loading...</div>;
   }
 
-  if (error) {
-    return <div className="text-center py-10 text-red-500">{error}</div>;
+  if (errorLocal || error) {
+    return <div className="text-center py-10 text-red-500">{errorLocal || error}</div>;
   }
 
   return (
@@ -122,9 +156,9 @@ const Profile = () => {
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
         <div className="flex items-center space-x-4">
           <div className="w-16 h-16 bg-gray-300 rounded-full overflow-hidden">
-            {user?.profile?.image && !imageError ? (
+            {userProfile?.profile?.image && !imageError ? (
               <img
-                src={getImageUrl(user.profile.image)}
+                src={getImageUrl(userProfile.profile.image)}
                 alt="Profile"
                 className="w-full h-full object-cover"
                 onError={() => setImageError(true)} // Switch to icon if image fails

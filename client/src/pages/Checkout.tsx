@@ -12,29 +12,11 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-
-// Define interfaces
-interface Order {
-  id: number;
-  created_at: string;
-  status: string;
-  payment_status: string;
-  total_amount: number;
-  items: OrderItem[];
-}
-
-interface OrderItem {
-  product_title: string;
-  size: string;
-  quantity: number;
-  price: number;
-  image?: string; // Add image property
-}
-
-interface Product {
-  title: string;
-  image: string;
-}
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState, AppDispatch } from '../store';
+import { fetchOrdersStart, fetchOrdersSuccess, fetchOrdersFailure } from '../store/slices/orderSlice';
+import { Order, OrderItem } from '../store/slices/orderSlice'; // Import Order and OrderItem
+import { AxiosError } from 'axios'; // Import AxiosError
 
 interface Address {
   address_line1: string;
@@ -81,49 +63,44 @@ const PaymentCard = ({ payment }: { payment: PaymentMethod }) => (
 
 const OrderDetails = () => {
   const { orderid } = useParams<{ orderid: string }>();
-  const [order, setOrder] = useState<Order | null>(null);
+  const dispatch: AppDispatch = useDispatch();
+  const { orders, loading, error } = useSelector((state: RootState) => state.order);
   const [address, setAddress] = useState<Address | null>(null);
   const [payment, setPayment] = useState<PaymentMethod | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
+
+  const order = orders.find(o => o.id === orderid); // Find the order from Redux state
 
   useEffect(() => {
-    const fetchOrderDetails = async () => {
-      try {
-        setLoading(true);
-        const orderResponse = await api.get('api/user/orders/');
-        const selectedOrder = orderResponse.data.find((order: Order) => order.id === Number(orderid));
-        if (!selectedOrder) throw new Error('Order not found');
+    const fetchAdditionalOrderData = async () => {
+      // Only fetch if order is found in Redux and additional data is needed
+      if (order) {
+        try {
+          // Fetch shipping addresses
+          const addressResponse = await api.get('users/shipping-addresses');
+          const addressData = addressResponse.data.find((addr: Address) => addr.is_default);
+          setAddress(addressData);
 
-        const productsResponse = await api.get('api/products/');
-        const products = productsResponse.data;
-
-        const updatedItems = selectedOrder.items.map((item: any) => {
-          const product = products.find((product: Product) => product.title === item.product_title);
-          return {
-            ...item,
-            image: product ? product.image : '', // Set the image if product is found
-          };
-        });
-
-        setOrder({ ...selectedOrder, items: updatedItems });
-
-        const addressResponse = await api.get('users/shipping-addresses');
-        const addressData = addressResponse.data.find((addr: Address) => addr.is_default);
-        setAddress(addressData);
-
-        const paymentResponse = await api.get('users/payment-methods');
-        const paymentData = paymentResponse.data.find((pay: PaymentMethod) => pay.is_default);
-        setPayment(paymentData);
-      } catch (err: any) {
-        setError(err.response?.data?.detail || err.message || 'Failed to fetch order details.');
-      } finally {
-        setLoading(false);
+          // Fetch payment methods
+          const paymentResponse = await api.get('users/payment-methods');
+          const paymentData = paymentResponse.data.find((pay: PaymentMethod) => pay.is_default);
+          setPayment(paymentData);
+        } catch (err: AxiosError) { // Type err as AxiosError
+          console.error('Failed to fetch additional order data:', err);
+          // You might want to dispatch an error action here if these fetches are critical
+        }
       }
     };
 
-    fetchOrderDetails();
-  }, [orderid]);
+    // Dispatch fetchOrders if orders are not yet loaded or if a specific order is missing
+    if (!orders.length || !order) {
+      dispatch(fetchOrdersStart());
+      api.get('api/user/orders/')
+        .then((response: { data: Order[] }) => dispatch(fetchOrdersSuccess(response.data))) // Type response
+        .catch((err: AxiosError) => dispatch(fetchOrdersFailure(err.response?.data?.detail || 'Failed to fetch orders.'))); // Type err as AxiosError
+    }
+
+    fetchAdditionalOrderData();
+  }, [orderid, orders, dispatch, order]); // Depend on order and orders from Redux
 
   if (loading) {
     return <div className="text-center py-10">Loading...</div>;
@@ -140,11 +117,11 @@ const OrderDetails = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       <h2 className="text-2xl font-semibold mb-6">Order #{order.id}</h2>
-      <p className="text-gray-600 mb-4">{order.created_at}</p>
+      <p className="text-gray-600 mb-4">{order.createdAt}</p>
       
       <div className='flex capitalize justify-between mb-4 bg-white rounded-lg shadow-md p-4'>
         <p>Order Status:</p>
-        <p className={`text-sm ${order.status === 'Delivered' ? 'text-green-600' : 'text-yellow-600'}`}>
+        <p className={`text-sm ${order.status === 'completed' ? 'text-green-600' : 'text-yellow-600'}`}>
           {order.status}
         </p>
         <p>Payment Status:</p>
@@ -167,7 +144,7 @@ const OrderDetails = () => {
             <div>
               <h4 className="text-lg font-semibold">{item.product_title}</h4>
               <p className="text-gray-600">Color: Gray</p> {/* Mock color */}
-              <p className="text-gray-600">Size: {item.size || 'N/A'}</p>
+              <p className="text-gray-600">Size: {item.size}</p>
               <p className="text-gray-600">Qty: {item.quantity}</p>
               <p className="font-semibold">Ksh {item.price}</p>
             </div>
@@ -176,7 +153,7 @@ const OrderDetails = () => {
       </div>
 
       <div className='flex justify-between mb-4 bg-white rounded-lg shadow-md p-4'>
-        <p className="text-black font-semibold text-2lg">Total Amount: Ksh {order.total_amount}</p>
+        <p className="text-black font-semibold text-2lg">Total Amount: Ksh {order.totalAmount}</p>
       </div>
 
       {/* Address and Payment Information */}
@@ -189,7 +166,7 @@ const OrderDetails = () => {
         <p className="text-gray-600">Tracking #: IW34753455</p> {/* Mock tracking number */}
         <p className="text-gray-600">Delivery Method: FedEx, 3 days</p>
         <p className="text-gray-600">Discount: 10%, Personal Promo Code</p>
-        <p className="text-gray-600">Total Amount: Ksh {order.total_amount}</p>
+        <p className="text-gray-600">Total Amount: Ksh {order.totalAmount}</p>
       </div>
 
       {/* Actions */}
@@ -216,7 +193,7 @@ const OrderDetails = () => {
               isOpen={true}
               onClose={() => {}}
               orderId={order.id.toString()}
-              amount={order.total_amount}
+              amount={order.totalAmount}
             />
             <DialogClose asChild>
                   <Button className='bg-red-600 text-white'variant="secondary">Close</Button>

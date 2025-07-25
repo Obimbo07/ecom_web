@@ -1,33 +1,37 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState, AppDispatch } from '../store';
+import { loginStart, loginSuccess, loginFailure } from '../store/slices/authSlice';
 import api from '../api';
 import { FaFacebookF, FaInstagram, FaGoogle } from 'react-icons/fa';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const dispatch: AppDispatch = useDispatch();
+  const { loading, error } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
-    setError(''); // Clear previous errors
-    setLoading(true); // Start loading
+    dispatch(loginStart());
     try {
       const response = await api.post('users/login/', { email, password });
-      console.log(response, 'api sign response')
+      console.log(response, 'api sign response');
       localStorage.setItem('token', response.data.access_token);
       localStorage.setItem('refresh_token', response.data.refresh_token);
-      login();
+      dispatch(loginSuccess({
+        id: response.data.user_id, // Assuming user_id is returned
+        username: response.data.username, // Assuming username is returned
+        email: email,
+        token: response.data.access_token,
+      }));
       navigate('/');
-    } catch (err) {
-      setError('Login failed. Check your credentials.');
-    } finally {
-      setLoading(false); // Stop loading
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Login failed. Check your credentials.';
+      dispatch(loginFailure(errorMessage));
     }
   };
 
