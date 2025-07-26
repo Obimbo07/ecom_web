@@ -46,7 +46,7 @@ const DiscountsScreen: React.FC = () => {
         setLoading(true);
         // Fetch all products
         const response = await api.get('/api/products/');
-        const allProducts: Product[] = response.data;
+        const allProducts: Product[] = response.data as Product[];
 
         // Filter products with discounts
         const discountedProducts = allProducts.filter((product) => {

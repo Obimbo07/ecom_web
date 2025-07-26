@@ -8,9 +8,10 @@ import { RootState, AppDispatch } from '../store';
 import {
   addItemToCart,
   removeItemFromCart,
+  removeItemCompletely,
   clearCart,
 } from '../store/slices/cartSlice';
-import { placeOrderStart, placeOrderSuccess, placeOrderFailure } from '../store/slices/orderSlice';
+import { placeOrderStart, placeOrderSuccess, placeOrderFailure, Order } from '../store/slices/orderSlice';
 import { setCart } from '../store/slices/cartSlice';
 
 interface Product {
@@ -25,8 +26,9 @@ interface CartItem {
   name: string;
   price: number;
   quantity: number;
-  image: string | null;
+  image: string;
 }
+
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -35,7 +37,6 @@ const Cart = () => {
   const totalAmount = useSelector((state: RootState) => state.cart.totalAmount);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
 
   // This useEffect will now primarily fetch product details for items already in Redux cart
@@ -49,7 +50,7 @@ const Cart = () => {
           if (!item.image || !item.name) {
             try {
               const productResponse = await api.get(`api/products/${item.id}`);
-              const productData: Product = productResponse.data;
+              const productData = productResponse.data as Product;
               return {
                 ...item,
                 name: productData.name,
@@ -57,14 +58,14 @@ const Cart = () => {
                 price: productData.price,
               };
             } catch (err) {
-              return { ...item, name: 'Unknown Product', image: null, price: 0 };
+              return { ...item, name: 'Unknown Product', image: '', price: 0 };
             }
           }
           return item;
         })
       );
       // Optionally update Redux with full details:
-      dispatch(setCart(updatedCartItems));
+      dispatch(setCart(updatedCartItems as CartItem[]));
       setLoading(false);
       // If you want to update the cart items in Redux with full product details, you'd dispatch an action here.
       // For now, we'll assume the cartSlice only stores basic info and product details are fetched on demand.
@@ -77,7 +78,7 @@ const Cart = () => {
     } else {
       setLoading(false);
     }
-  }, [dispatch]);
+  }, [dispatch, cartItems]);
 
 const handleIncrementQuantity = (item: CartItem) => {
     dispatch(addItemToCart({ ...item, quantity: 1, image: item.image || "" })); // Add 1 to quantity
@@ -88,11 +89,7 @@ const handleIncrementQuantity = (item: CartItem) => {
   };
 
   const handleRemoveFromCart = (itemId: string) => {
-    // To remove all instances of an item, you might need a specific action
-    // For now, removeItemFromCart reduces quantity by 1.
-    // If you want to remove completely, you'd need a new action in cartSlice.
-    // For simplicity, let's assume removeItemFromCart handles full removal if quantity becomes 0.
-    dispatch(removeItemFromCart(itemId));
+    dispatch(removeItemCompletely(itemId));
   };
 
   const handleProceedToCheckout = async () => {
@@ -100,9 +97,10 @@ const handleIncrementQuantity = (item: CartItem) => {
     try {
       // Assuming your backend expects cart items to create an order
       const orderResponse = await api.post('/api/orders/', { items: cartItems });
-      dispatch(placeOrderSuccess(orderResponse.data));
+      const orderData = orderResponse.data as Order;
+      dispatch(placeOrderSuccess(orderData));
       dispatch(clearCart()); // Clear cart after successful order
-      navigate(`/checkout/${orderResponse.data.id}`);
+      navigate(`/checkout/${orderData.id}`);
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Failed to create order.';
       dispatch(placeOrderFailure(errorMessage));
@@ -134,10 +132,6 @@ const handleIncrementQuantity = (item: CartItem) => {
     <div className="min-h-screen bg-gray-100 p-4">
       <h2 className="text-2xl font-semibold mb-6">Your Cart</h2>
 
-      {/* Feedback Message */}
-      {message && (
-        <div className="mb-4 text-center text-green-600">{message}</div>
-      )}
       {error && (
         <div className="mb-4 text-center text-red-600">{error}</div>
       )}

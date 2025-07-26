@@ -4,7 +4,7 @@ import { FaFacebookF, FaInstagram, FaGoogle } from 'react-icons/fa';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../store';
 import { loginStart, loginSuccess, loginFailure } from '../store/slices/authSlice';
-import api from '../api'; // Assuming you still need api for registration
+import api from '../api';
 
 const SignUp = () => {
   const [username, setUsername] = useState('');
@@ -15,19 +15,15 @@ const SignUp = () => {
   const { loading, error } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(loginStart()); // Use loginStart for registration as well, as it's an auth process
     try {
       const response = await api.post('/users/register/', { username, email, password });
+      const { access_token, refresh_token } = response.data as { access_token: string, refresh_token: string };
       console.log(response, 'registration response');
       // Assuming successful registration also logs the user in or provides a token
-      dispatch(loginSuccess({
-        id: response.data.user_id, // Assuming user_id is returned
-        username: username,
-        email: email,
-        token: response.data.access_token, // Assuming token is returned
-      }));
+      dispatch(loginSuccess({ token: access_token, refresh: refresh_token }));
       navigate('/');
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Registration failed due to an unknown error.';

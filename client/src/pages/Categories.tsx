@@ -14,7 +14,7 @@ interface Category {
 
 const Categories = () => {
   const dispatch: AppDispatch = useDispatch();
-  const { products, loading, error } = useSelector((state: RootState) => state.product);
+  const { loading, error } = useSelector((state: RootState) => state.product);
   const [categories, setCategories] = useState<Category[]>([]); // Still need local state for categories
 
   // Fetch categories and products
@@ -23,7 +23,7 @@ const Categories = () => {
       // Fetch categories
       try {
         const categoryResponse = await api.get('api/categories/');
-        setCategories(categoryResponse.data);
+        setCategories(categoryResponse.data as Category[]);
       } catch (err: any) {
         console.error('Failed to fetch categories:', err);
         // Optionally dispatch an error for categories if you want to manage that state in Redux
@@ -33,7 +33,7 @@ const Categories = () => {
       dispatch(fetchProductsStart());
       try {
         const productResponse = await api.get('/api/products/');
-        dispatch(fetchProductsSuccess(productResponse.data));
+        dispatch(fetchProductsSuccess(productResponse.data as any[]));
       } catch (err: any) {
         dispatch(fetchProductsFailure(err.response?.data?.detail || 'Failed to fetch products.'));
       }

@@ -15,8 +15,7 @@ import { Button } from "@/components/ui/button";
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../store';
 import { fetchOrdersStart, fetchOrdersSuccess, fetchOrdersFailure } from '../store/slices/orderSlice';
-import { Order, OrderItem } from '../store/slices/orderSlice'; // Import Order and OrderItem
-import { AxiosError } from 'axios'; // Import AxiosError
+import { Order } from '../store/slices/orderSlice'; // Import Order
 
 interface Address {
   address_line1: string;
@@ -77,14 +76,18 @@ const OrderDetails = () => {
         try {
           // Fetch shipping addresses
           const addressResponse = await api.get('users/shipping-addresses');
-          const addressData = addressResponse.data.find((addr: Address) => addr.is_default);
-          setAddress(addressData);
+          const addressData = (addressResponse.data as Address[]).find((addr: Address) => addr.is_default);
+          if (addressData) {
+            setAddress(addressData);
+          }
 
           // Fetch payment methods
           const paymentResponse = await api.get('users/payment-methods');
-          const paymentData = paymentResponse.data.find((pay: PaymentMethod) => pay.is_default);
-          setPayment(paymentData);
-        } catch (err: AxiosError) { // Type err as AxiosError
+          const paymentData = (paymentResponse.data as PaymentMethod[]).find((pay: PaymentMethod) => pay.is_default);
+          if (paymentData) {
+            setPayment(paymentData);
+          }
+        } catch (err: any) { // Type err as any
           console.error('Failed to fetch additional order data:', err);
           // You might want to dispatch an error action here if these fetches are critical
         }
@@ -94,9 +97,12 @@ const OrderDetails = () => {
     // Dispatch fetchOrders if orders are not yet loaded or if a specific order is missing
     if (!orders.length || !order) {
       dispatch(fetchOrdersStart());
-      api.get('api/user/orders/')
-        .then((response: { data: Order[] }) => dispatch(fetchOrdersSuccess(response.data))) // Type response
-        .catch((err: AxiosError) => dispatch(fetchOrdersFailure(err.response?.data?.detail || 'Failed to fetch orders.'))); // Type err as AxiosError
+      api.get('api/user/orders/').then(response => {
+        dispatch(fetchOrdersSuccess(response.data as Order[]));
+      }).catch(err => {
+        const errorMessage = err.response?.data?.detail || 'Failed to fetch orders.';
+        dispatch(fetchOrdersFailure(errorMessage));
+      });
     }
 
     fetchAdditionalOrderData();

@@ -5,27 +5,6 @@ import { RootState, AppDispatch } from '../store';
 import { applyFilters } from '../store/slices/productSlice';
 import ProductCard from '../components/products/ProductsCard'; // Reuse the ProductCard component
 
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  imageUrl: string;
-  description: string;
-  specifications: string | null;
-  type: string;
-  stock_count: string;
-  life: string;
-  additional_images: { id: number; image: string | null; date: string }[];
-  holiday_deals: {
-    deal_id: string;
-    name: string;
-    discount_percentage: number;
-    discounted_price: number;
-    start_date: string;
-    end_date: string;
-  } | null;
-  old_price: number;
-}
 
 const CategoryProducts = () => {
   const { categoryId } = useParams<{ categoryId: string }>();

@@ -49,27 +49,10 @@ interface PaymentMethod {
   last_four: string;
 }
 
-interface PaymentMethod {
-  id: number;
-  method_type: string;
-  last_four: string;
-}
-
-interface PaymentMethod {
-  id: number;
-  method_type: string;
-  last_four: string;
-}
-
-interface PaymentMethod {
-  id: number;
-  method_type: string;
-  last_four: string;
-}
 
 const Profile = () => {
   const dispatch: AppDispatch = useDispatch();
-  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const { orders, loading, error } = useSelector((state: RootState) => state.order) as { orders: Order[]; loading: boolean; error: string | null };
 
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -93,7 +76,7 @@ const Profile = () => {
         dispatch(fetchOrdersStart());
         try {
           const ordersResponse = await api.get('api/user/orders/');
-          dispatch(fetchOrdersSuccess(ordersResponse.data as any));
+          dispatch(fetchOrdersSuccess(ordersResponse.data as Order[]));
         } catch (err: any) {
           dispatch(fetchOrdersFailure(err.response?.data?.detail || 'Failed to fetch orders.'));
         }
@@ -168,8 +151,8 @@ const Profile = () => {
             )}
           </div>
           <div>
-            <h3 className="text-xl font-semibold">{user?.username || 'Loading...'}</h3>
-            <p className="text-gray-600">{user?.email || 'No email'}</p>
+            <h3 className="text-xl font-semibold">{userProfile?.username || 'Loading...'}</h3>
+            <p className="text-gray-600">{userProfile?.email || 'No email'}</p>
           </div>
         </div>
       </div>

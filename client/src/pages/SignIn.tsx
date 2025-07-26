@@ -14,21 +14,16 @@ const Login = () => {
   const { loading, error } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     dispatch(loginStart());
     try {
       const response = await api.post('users/login/', { username: email, password });
+      const { access_token, refresh_token } = response.data as { access_token: string, refresh_token: string };
       console.log(response, 'api sign response');
-      localStorage.setItem('token', response.data.access_token);
-      localStorage.setItem('refresh_token', response.data.refresh_token);
-      dispatch(loginSuccess({
-        // id: response.data.user_id, // Assuming user_id is returned
-        // username: response.data.username, // Assuming username is returned
-        // email: email,
-        token: response.data.access_token,
-        refresh: response.data.refresh_token,
-      }));
+      localStorage.setItem('token', access_token);
+      localStorage.setItem('refresh_token', refresh_token);
+      dispatch(loginSuccess({ token: access_token, refresh: refresh_token }));
       navigate('/');
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Login failed. Check your credentials.';

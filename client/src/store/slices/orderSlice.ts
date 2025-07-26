@@ -43,8 +43,10 @@ const orderSlice = createSlice({
     },
     placeOrderSuccess(state, action: PayloadAction<Order>) {
       state.loading = false;
-      state.currentOrder = action.payload;
-      state.orders.push(action.payload); // Add to list of past orders
+      if (action.payload) {
+        state.currentOrder = action.payload;
+        state.orders.push(action.payload); // Add to list of past orders
+      }
       state.error = null;
     },
     placeOrderFailure(state, action: PayloadAction<string>) {
