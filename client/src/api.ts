@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create Axios instance
 const api = axios.create({
-  baseURL: 'https://mohacollection.co.ke/',
+  baseURL: 'http://127.0.0.1:8000/',
   headers: {
     'Content-Type': 'application/json', // Explicitly set for clarity
   },

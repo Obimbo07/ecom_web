@@ -7,7 +7,7 @@ import api from '../api';
 import { FaFacebookF, FaInstagram, FaGoogle } from 'react-icons/fa';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const dispatch: AppDispatch = useDispatch();
@@ -18,7 +18,7 @@ const Login = () => {
     e.preventDefault();
     dispatch(loginStart());
     try {
-      const response = await api.post('users/login/', { username: email, password });
+      const response = await api.post('users/login/', { username, password });
       const { access_token, refresh_token } = response.data as { access_token: string, refresh_token: string };
       console.log(response, 'api sign response');
       localStorage.setItem('token', access_token);
@@ -50,10 +50,10 @@ const Login = () => {
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
-            type="username"
-            placeholder="Email Address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             className="w-full p-3 bg-white rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={loading}
           />

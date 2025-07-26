@@ -65,7 +65,6 @@ const Cart = () => {
         })
       );
       // Optionally update Redux with full details:
-      dispatch(setCart(updatedCartItems as CartItem[]));
       setLoading(false);
       // If you want to update the cart items in Redux with full product details, you'd dispatch an action here.
       // For now, we'll assume the cartSlice only stores basic info and product details are fetched on demand.

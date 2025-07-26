@@ -20,11 +20,22 @@ class ProductSerializer(serializers.ModelSerializer):
     image = serializers.SerializerMethodField()
     holiday_deals = serializers.SerializerMethodField()
     additional_images = ProductImageSerializer(many=True, source='p_images')
+    rating = serializers.SerializerMethodField()
+    numReviews = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = ['id', 'title', 'price', 'old_price', 'category_id', 'description', 
-                  'specifications', 'holiday_deals','type', 'stock_count', 'life', 'image', 'additional_images']
+                  'specifications', 'holiday_deals','type', 'stock_count', 'life', 'image', 'additional_images', 'rating', 'numReviews']
+    
+    def get_rating(self, obj):
+        reviews = obj.reviews.all()
+        if reviews:
+            return sum([r.rating for r in reviews]) / len(reviews)
+        return 0
+
+    def get_numReviews(self, obj):
+        return obj.reviews.count()
     
     def get_holiday_deals(self, obj):
         """Return active holiday deals with discounted price."""
@@ -136,4 +147,4 @@ class HolidayDealSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = HolidayDeal
-        fields = ['deal_id', 'name', 'discount_percentage', 'start_date', 'end_date', 'is_active', 'products']	
+        fields = ['deal_id', 'name', 'discount_percentage', 'start_date', 'end_date', 'is_active', 'products']

@@ -23,12 +23,26 @@ def register_user(request):
             return Response({"detail": "Username already taken"}, status=status.HTTP_400_BAD_REQUEST)
         if User.objects.filter(email=serializer.validated_data['email']).exists():
            return Response({"detail": "Email already taken"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
+        
         user = User.objects.create_user(
-            username=serializer.validated_data['username'],
+            username=username,
             email=serializer.validated_data['email'],
-            password=serializer.validated_data['password']
+            password=password
         )
-        return Response({"message": "User registered successfully"}, status=status.HTTP_201_CREATED)
+        
+        # Authenticate and log in the user
+        user = authenticate(request, username=username, password=password)
+        if user:
+            token = AccessToken.for_user(user)
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "access_token": str(token),
+                "refresh_token": str(refresh)
+            }, status=status.HTTP_201_CREATED)
+            
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
@@ -38,7 +52,7 @@ def login_user(request):
     if serializer.is_valid():
         username = serializer.validated_data['username']
         password = serializer.validated_data['password']
-        user = authenticate(username=username, password=password)
+        user = authenticate(request, username=username, password=password)
         if not user:
             return Response({"detail": "Invalid username or password"}, status=status.HTTP_401_UNAUTHORIZED)
         token = AccessToken.for_user(user)
