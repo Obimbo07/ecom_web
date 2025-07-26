@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create Axios instance
 const api = axios.create({
-  baseURL: 'https://admin.mohacollection.co.ke', // Adjust for production later
+  baseURL: 'http://127.0.0.1:8000/',
   headers: {
     'Content-Type': 'application/json', // Explicitly set for clarity
   },
@@ -12,7 +12,7 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const accessToken = localStorage.getItem('token');
-    if (accessToken) {
+    if (accessToken && config.headers) {
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
     return config;
@@ -35,7 +35,7 @@ api.interceptors.response.use(
           refresh: refreshToken,
         });
 
-        const { access } = response.data;
+        const { access } = response.data as { access: string };
         localStorage.setItem('token', access);
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return api(originalRequest); // Retry with new token
@@ -43,7 +43,9 @@ api.interceptors.response.use(
         console.error('Refresh token failed:', refreshError);
         localStorage.removeItem('token');
         localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       }
     }

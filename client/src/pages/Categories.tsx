@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState, AppDispatch } from '../store';
+import { fetchProductsStart, fetchProductsSuccess, fetchProductsFailure } from '../store/slices/productSlice';
 import api from '../api';
 
 // Define Category interface based on CategoryResponse
@@ -10,25 +13,33 @@ interface Category {
 }
 
 const Categories = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
+  const dispatch: AppDispatch = useDispatch();
+  const { loading, error } = useSelector((state: RootState) => state.product);
+  const [categories, setCategories] = useState<Category[]>([]); // Still need local state for categories
 
-  // Fetch categories
+  // Fetch categories and products
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchCategoriesAndProducts = async () => {
+      // Fetch categories
       try {
-        setLoading(true);
-        const response = await api.get('api/categories/');
-        setCategories(response.data);
+        const categoryResponse = await api.get('api/categories/');
+        setCategories(categoryResponse.data as Category[]);
       } catch (err: any) {
-        setError(err.response?.data?.detail || 'Failed to fetch categories.');
-      } finally {
-        setLoading(false);
+        console.error('Failed to fetch categories:', err);
+        // Optionally dispatch an error for categories if you want to manage that state in Redux
+      }
+
+      // Fetch all products into Redux
+      dispatch(fetchProductsStart());
+      try {
+        const productResponse = await api.get('/api/products/');
+        dispatch(fetchProductsSuccess(productResponse.data as any[]));
+      } catch (err: any) {
+        dispatch(fetchProductsFailure(err.response?.data?.detail || 'Failed to fetch products.'));
       }
     };
-    fetchCategories();
-  }, []);
+    fetchCategoriesAndProducts();
+  }, [dispatch]);
 
   if (loading) {
     return <div className="text-center py-10">Loading...</div>;

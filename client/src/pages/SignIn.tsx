@@ -1,33 +1,33 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState, AppDispatch } from '../store';
+import { loginStart, loginSuccess, loginFailure } from '../store/slices/authSlice';
 import api from '../api';
 import { FaFacebookF, FaInstagram, FaGoogle } from 'react-icons/fa';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const dispatch: AppDispatch = useDispatch();
+  const { loading, error } = useSelector((state: RootState) => state.auth);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(''); // Clear previous errors
-    setLoading(true); // Start loading
+    dispatch(loginStart());
     try {
-      const response = await api.post('users/login/', { email, password });
-      console.log(response, 'api sign response')
-      localStorage.setItem('token', response.data.access_token);
-      localStorage.setItem('refresh_token', response.data.refresh_token);
-      login();
+      const response = await api.post('users/login/', { username, password });
+      const { access_token, refresh_token } = response.data as { access_token: string, refresh_token: string };
+      console.log(response, 'api sign response');
+      localStorage.setItem('token', access_token);
+      localStorage.setItem('refresh_token', refresh_token);
+      dispatch(loginSuccess({ token: access_token, refresh: refresh_token }));
       navigate('/');
-    } catch (err) {
-      setError('Login failed. Check your credentials.');
-    } finally {
-      setLoading(false); // Stop loading
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Login failed. Check your credentials.';
+      dispatch(loginFailure(errorMessage));
     }
   };
 
@@ -50,10 +50,10 @@ const Login = () => {
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
-            type="email"
-            placeholder="Email Address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             className="w-full p-3 bg-white rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={loading}
           />

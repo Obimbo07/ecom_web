@@ -48,8 +48,8 @@ const DealDetailScreen: React.FC = () => {
         setLoading(true);
         const dealResponse = await api.get(`/api/holiday-deals/${dealId}/`);
         const productsResponse = await api.get(`/api/holiday-deals/${dealId}/products/`);
-        setDeal(dealResponse.data);
-        setProducts(productsResponse.data);
+        setDeal(dealResponse.data as HolidayDeal);
+        setProducts(productsResponse.data as Product[]);
       } catch (err: any) {
         setError(err.response?.data?.detail || 'Failed to fetch deal details');
       } finally {

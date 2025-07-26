@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState, AppDispatch } from '../store';
+import { fetchProductsStart, fetchProductsSuccess, fetchProductsFailure, Product } from '../store/slices/productSlice';
+
 import HomeCarousel from '@/components/carousel/HomeCarousel';
 import ProductsCarousel from '@/components/products/ProductsCarousel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -23,11 +26,12 @@ interface HolidayDeal {
 }
 
 const Home = () => {
-  const { isAuthenticated } = useAuth();
+  const dispatch: AppDispatch = useDispatch();
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const [categories, setCategories] = useState<Category[]>([]);
   const [deals, setDeals] = useState<HolidayDeal[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
-  const [loadingDeals, setLoadingDeals] = useState(true);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [loadingDeals, setLoadingDeals] = useState(false);
   const navigate = useNavigate();
 
   if (!isAuthenticated) {
@@ -38,7 +42,7 @@ const Home = () => {
     const fetchCategories = async () => {
       try {
         setLoadingCategories(true);
-        const response = await api.get('/api/categories/');
+        const response = await api.get<Category[]>('/api/categories/');
         setCategories(response.data);
       } catch (err) {
         console.error('Error fetching categories:', err);
@@ -50,7 +54,7 @@ const Home = () => {
     const fetchDeals = async () => {
       try {
         setLoadingDeals(true);
-        const response = await api.get('/api/holiday-deals/');
+        const response = await api.get<HolidayDeal[]>('/api/holiday-deals/');
         setDeals(response.data);
       } catch (err) {
         console.error('Error fetching deals:', err);
@@ -59,9 +63,20 @@ const Home = () => {
       }
     };
 
+    const fetchAllProducts = async () => {
+      dispatch(fetchProductsStart());
+      try {
+        const response = await api.get<Product[]>('/api/products/');
+        dispatch(fetchProductsSuccess(response.data));
+      } catch (err: any) {
+        dispatch(fetchProductsFailure(err.response?.data?.detail || 'Failed to fetch products.'));
+      }
+    };
+
     fetchCategories();
     fetchDeals();
-  }, []);
+    fetchAllProducts();
+  }, [dispatch]);
 
   if (loadingCategories || loadingDeals) {
     return <div className="text-center py-10">Loading...</div>;
