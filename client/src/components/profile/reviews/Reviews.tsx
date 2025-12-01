@@ -32,7 +32,7 @@ const Reviews = () => {
 
     useEffect(() => {
         if (!user) {
-            navigate('/signin');
+            navigate('/login');
             return;
         }
         fetchReviews();

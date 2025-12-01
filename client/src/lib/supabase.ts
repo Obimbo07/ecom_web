@@ -903,7 +903,7 @@ export const getProductReviews = async (productId: number) => {
 
 export const getUserReviews = async (userId: string) => {
   const { data, error } = await supabase
-    .from('product_reviews')
+    .from('reviews')
     .select(`
       *,
       product:products(id, title, image, slug)
