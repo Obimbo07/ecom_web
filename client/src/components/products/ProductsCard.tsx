@@ -1,7 +1,6 @@
-import api from '@/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { useState } from 'react';
-import { FaStar, FaShoppingCart, FaEye, FaEllipsisH, FaCheck } from 'react-icons/fa'; // Added FaEllipsisH and FaCheck
+import { FaStar, FaShoppingCart, FaEye, FaEllipsisH, FaCheck } from 'react-icons/fa';
 import {
   Drawer,
   DrawerClose,
@@ -14,30 +13,32 @@ import {
 import { Button } from '@/components/ui/button';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import parse from 'html-react-parser';
-
-// Define interfaces based on the ProductResponse and HolidayDeal structure
-interface HolidayDeal {
-  deal_id: string;
-  name: string;
-  discount_percentage: number;
-  discounted_price: number;
-  start_date: string;
-  end_date: string;
-}
+import { addToGuestCart, addToUserCart } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 interface Product {
   id: number;
   title: string;
   price: number;
-  old_price: number;
+  old_price: number | null;
   image: string | null;
-  description: string;
+  description: string | null;
   specifications: string | null;
-  type: string;
-  stock_count: string;
-  life: string;
-  additional_images: { id: number; image: string | null; date: string }[];
-  holiday_deals: HolidayDeal | null;
+  type: string | null;
+  stock_count: number;
+  slug: string | null;
+  featured: boolean;
+  category: {
+    id: number;
+    title: string;
+    slug: string | null;
+  } | null;
+  images: Array<{
+    id: number;
+    image: string;
+    alt_text: string | null;
+    display_order: number;
+  }>;
 }
 
 interface ProductCardProps {
@@ -45,22 +46,24 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const { user } = useAuth();
   const [fetchDisabled, setFetchDisabled] = useState(false);
 
   // Regular discount (old_price vs price)
-  const hasRegularDiscount = product.old_price > product.price;
-  const regularDiscountPercentage = hasRegularDiscount
+  const hasRegularDiscount = product.old_price !== null && product.old_price > product.price;
+  const regularDiscountPercentage = hasRegularDiscount && product.old_price
     ? Math.round(((product.old_price - product.price) / product.old_price) * 100)
     : 0;
 
-  // Holiday deal discount
-  const holidayDeal = product.holiday_deals;
-  const hasHolidayDiscount = !!holidayDeal;
+  // Display price
+  const displayPrice = product.price;
 
-  // Determine display price (holiday deal takes precedence if active)
-  const displayPrice = hasHolidayDiscount ? holidayDeal.discounted_price : product.price;
+  // Get primary image (lowest display_order) or first image
+  const primaryImage = product.images && product.images.length > 0
+    ? (product.images.sort((a, b) => a.display_order - b.display_order)[0]?.image || product.images[0].image)
+    : product.image;
 
-  // Render stars based on rating (placeholder; adjust if you add a rating field)
+  // Render stars based on rating (placeholder; can be enhanced with actual ratings)
   const renderStars = (rating: number) => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -77,26 +80,33 @@ export function ProductCard({ product }: ProductCardProps) {
   const handleAddToCart = async () => {
     setFetchDisabled(true);
     try {
-      const addToCartResponse = await api.post(`/api/cart/`, {
-        product_id: product.id,
-        quantity: 1,
-      });
-      console.log(addToCartResponse.data, 'cart response');
+      if (user) {
+        await addToUserCart(user.id, {
+          productId: product.id,
+          quantity: 1,
+        });
+      } else {
+        addToGuestCart({
+          product_id: product.id,
+          quantity: 1,
+        });
+      }
+      // Success - button will show checkmark for 2 seconds
     } catch (err: any) {
       console.error('Error adding to cart:', err);
+      alert('Failed to add to cart. Please try again.');
     } finally {
-      // Keep the button in the "success" state for a short time before resetting
       setTimeout(() => setFetchDisabled(false), 2000);
     }
   };
 
   return (
-    <Card className="border-none overflow-hidden p-0 shadow-lg hover:shadow-xl transition-shadow">
+    <Card className="border-none overflow-hidden p-0 shadow-lg hover:]]-xl transition-shadow">
       <CardContent className="p-0">
         <div className="w-full h-48 bg-gray-200 relative">
-          {product.image ? (
+          {primaryImage ? (
             <img
-              src={product.image}
+              src={primaryImage}
               alt={product.title}
               className="w-full h-full object-cover"
             />
@@ -105,36 +115,22 @@ export function ProductCard({ product }: ProductCardProps) {
               No image available
             </div>
           )}
-          {/* Display discount badge: Holiday deal takes precedence */}
-          {(hasHolidayDiscount || hasRegularDiscount) && (
+          {hasRegularDiscount && (
             <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold py-1 px-2 rounded-full">
-              {hasHolidayDiscount ? `Deal -${holidayDeal.discount_percentage}%` : `Deal -${regularDiscountPercentage}%`}
+              -{regularDiscountPercentage}%
             </span>
           )}
         </div>
         <div className="p-4">
           <h3 className="text-lg font-semibold line-clamp-2">{product.title}</h3>
           <div className="flex items-center gap-2 mt-2">
-            {hasHolidayDiscount ? (
-              <>
-                <span className="text-lg font-bold text-green-600">
-                  Ksh {displayPrice}
-                </span>
-                <span className="text-sm text-gray-500 line-through">
-                  Ksh {product.price}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="text-lg font-bold text-green-600">
-                  Ksh {displayPrice}
-                </span>
-                {hasRegularDiscount && (
-                  <span className="text-sm text-gray-500 line-through">
-                    Ksh {product.old_price}
-                  </span>
-                )}
-              </>
+            <span className="text-lg font-bold text-green-600">
+              Ksh {displayPrice.toLocaleString()}
+            </span>
+            {hasRegularDiscount && (
+              <span className="text-sm text-gray-500 line-through">
+                Ksh {product.old_price?.toLocaleString()}
+              </span>
             )}
           </div>
           <div className="flex justify-between text-white text-sm space-x-2 mt-4">
@@ -160,7 +156,6 @@ export function ProductCard({ product }: ProductCardProps) {
                   aria-label="View product details"
                 >
                   <FaEye className="text-white text-lg hover:text-gray-200 transition-colors" />
-                
                 </button>
               </DrawerTrigger>
               <DrawerContent className="max-h-[80vh] overflow-y-auto bg-white">
@@ -172,88 +167,92 @@ export function ProductCard({ product }: ProductCardProps) {
                   <div className="relative">
                     <Carousel className="w-full max-w-md mx-auto">
                       <CarouselContent>
-                        {product.image && (
+                        {/* Primary image */}
+                        {primaryImage && (
                           <CarouselItem>
                             <img
-                              src={product.image}
+                              src={primaryImage}
                               alt={product.title}
                               className="w-full h-64 object-cover rounded-lg"
                             />
                           </CarouselItem>
                         )}
-                        {product.additional_images.map((img) => (
-                          <CarouselItem key={img.id}>
-                            {img.image ? (
+                        {/* Additional images */}
+                        {product.images && product.images.length > 1 && product.images
+                          .sort((a, b) => a.display_order - b.display_order)
+                          .slice(1) // Skip the first image (primary)
+                          .map((img) => (
+                            <CarouselItem key={img.id}>
                               <img
                                 src={img.image}
-                                alt={`${product.title} additional image`}
+                                alt={img.alt_text || `${product.title} view ${img.display_order}`}
                                 className="w-full h-64 object-cover rounded-lg"
                               />
-                            ) : (
-                              <div className="w-full h-64 flex items-center justify-center text-gray-500 bg-gray-200 rounded-lg">
-                                No image available
-                              </div>
-                            )}
-                          </CarouselItem>
-                        ))}
+                            </CarouselItem>
+                          ))}
                       </CarouselContent>
-                      <CarouselPrevious className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700" />
-                      <CarouselNext className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700" />
+                      {product.images && product.images.length > 1 && (
+                        <>
+                          <CarouselPrevious className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700" />
+                          <CarouselNext className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white rounded-full p-2 hover:bg-gray-700" />
+                        </>
+                      )}
                     </Carousel>
                   </div>
 
                   {/* Pricing and Discount */}
-                  <div className="flex items-center gap-2">
-                    {hasHolidayDiscount ? (
+                  <div className="flex items-center gap-2 mt-4">
+                    <span className="text-lg font-bold text-green-600">
+                      Ksh {displayPrice.toLocaleString()}
+                    </span>
+                    {hasRegularDiscount && (
                       <>
-                        <span className="text-lg font-bold text-green-600">
-                          Ksh {displayPrice}
-                        </span>
                         <span className="text-sm text-gray-500 line-through">
-                          Ksh {product.price}
-                        </span>
-                        <span className="bg-red-500 text-white text-xs font-bold py-1 px-2 rounded-full">
-                          Deal -{holidayDeal.discount_percentage}%
-                        </span>
-                      </>
-                    ) : hasRegularDiscount ? (
-                      <>
-                        <span className="text-lg font-bold text-green-600">
-                          Ksh {displayPrice}
-                        </span>
-                        <span className="text-sm text-gray-500 line-through">
-                          Ksh {product.old_price}
+                          Ksh {product.old_price?.toLocaleString()}
                         </span>
                         <span className="bg-red-500 text-white text-xs font-bold py-1 px-2 rounded-full">
                           -{regularDiscountPercentage}%
                         </span>
                       </>
-                    ) : (
-                      <span className="text-lg font-bold text-green-600">
-                        Ksh {displayPrice}
-                      </span>
                     )}
                   </div>
 
                   {/* Rating */}
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 mt-2">
                     {renderStars(4.5)}
                     <span className="text-sm text-gray-600">(4.5)</span>
                   </div>
 
+                  {/* Stock info */}
+                  <div className="mt-2">
+                    <span className={`text-sm font-medium ${product.stock_count > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {product.stock_count > 0 ? `In Stock (${product.stock_count} available)` : 'Out of Stock'}
+                    </span>
+                  </div>
+
                   {/* Description */}
-                  <div>
+                  <div className="mt-4">
                     <h4 className="text-md font-semibold">Description</h4>
-                    <div className="text-sm text-gray-600">
-                      {parse(product.description || 'No description available')}
+                    <div className="text-sm text-gray-600 mt-2">
+                      {product.description ? parse(product.description) : 'No description available'}
                     </div>
                   </div>
+
+                  {/* Specifications */}
+                  {product.specifications && (
+                    <div className="mt-4">
+                      <h4 className="text-md font-semibold">Specifications</h4>
+                      <div className="text-sm text-gray-600 mt-2">
+                        {parse(product.specifications)}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <DrawerFooter className="flex bg-white flex-col sm:flex-row gap-2">
                   <Button
                     onClick={handleAddToCart}
-                    disabled={fetchDisabled}
-                    className="w-full sm:w-auto bg-green-500 hover:bg-green-600 flex items-center justify-center space-x-2"
+                    disabled={fetchDisabled || product.stock_count === 0}
+                    className="w-full sm:w-auto bg-green-500 hover:bg-green-600 disabled:bg-gray-400 flex items-center justify-center space-x-2"
                     aria-label={fetchDisabled ? 'Product added to cart' : 'Add product to cart'}
                   >
                     {fetchDisabled ? (
@@ -262,7 +261,10 @@ export function ProductCard({ product }: ProductCardProps) {
                         <FaCheck className="text-white text-lg" />
                       </>
                     ) : (
-                      <FaShoppingCart className="text-white text-lg hover:text-gray-200 transition-colors" />
+                      <>
+                        <FaShoppingCart className="text-white text-lg" />
+                        <span>Add to Cart</span>
+                      </>
                     )}
                   </Button>
                   <DrawerClose asChild>

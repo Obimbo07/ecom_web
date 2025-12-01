@@ -1,0 +1,699 @@
+import { createClient } from '@supabase/supabase-js'
+import { Database } from '@/types/database.types'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables')
+}
+
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+
+// ============================================
+// AUTHENTICATION HELPERS
+// ============================================
+
+export const getCurrentUser = async () => {
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error) throw error
+  return user
+}
+
+export const getSession = async () => {
+  const { data: { session }, error } = await supabase.auth.getSession()
+  if (error) throw error
+  return session
+}
+
+export const signOut = async () => {
+  const { error } = await supabase.auth.signOut()
+  if (error) throw error
+}
+
+export const signIn = async (email: string, password: string) => {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+  if (error) throw error
+  return data
+}
+
+export const signUp = async (email: string, password: string, username: string, fullName?: string) => {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        username,
+        full_name: fullName || username,
+      }
+    }
+  })
+  if (error) throw error
+  return data
+}
+
+// ============================================
+// STORAGE HELPERS
+// ============================================
+
+export const uploadFile = async (
+  bucket: string,
+  path: string,
+  file: File
+): Promise<string> => {
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .upload(path, file, {
+      cacheControl: '3600',
+      upsert: false
+    })
+
+  if (error) throw error
+  
+  const { data: { publicUrl } } = supabase.storage
+    .from(bucket)
+    .getPublicUrl(data.path)
+  
+  return publicUrl
+}
+
+export const getFileUrl = (bucket: string, path: string): string => {
+  const { data: { publicUrl } } = supabase.storage
+    .from(bucket)
+    .getPublicUrl(path)
+  
+  return publicUrl
+}
+
+export const deleteFile = async (bucket: string, path: string) => {
+  const { error } = await supabase.storage
+    .from(bucket)
+    .remove([path])
+  
+  if (error) throw error
+}
+
+// ============================================
+// PRODUCT HELPERS
+// ============================================
+
+export const getProducts = async (filters?: {
+  categoryId?: number
+  featured?: boolean
+  search?: string
+  limit?: number
+  offset?: number
+}) => {
+  let query = supabase
+    .from('products')
+    .select(`
+      *,
+      category:categories(id, title, slug),
+      images:product_images(id, image, alt_text, display_order)
+    `)
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+
+  if (filters?.categoryId) {
+    query = query.eq('category_id', filters.categoryId)
+  }
+
+  if (filters?.featured !== undefined) {
+    query = query.eq('featured', filters.featured)
+  }
+
+  if (filters?.search) {
+    query = query.ilike('title', `%${filters.search}%`)
+  }
+
+  if (filters?.limit) {
+    query = query.limit(filters.limit)
+  }
+
+  if (filters?.offset) {
+    query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1)
+  }
+
+  const { data, error } = await query
+
+  if (error) throw error
+  return data
+}
+
+export const getProductBySlug = async (slug: string) => {
+  const { data, error } = await supabase
+    .from('products')
+    .select(`
+      *,
+      category:categories(id, title, slug),
+      images:product_images(id, image, is_primary, display_order),
+      reviews:product_reviews(id, rating, comment, user:profiles(username, image), created_at)
+    `)
+    .eq('slug', slug)
+    .eq('is_active', true)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export const getProductsWithDeals = async () => {
+  const { data, error } = await supabase
+    .from('products_with_deals')
+    .select('*')
+
+  if (error) throw error
+  return data
+}
+
+// ============================================
+// CATEGORY HELPERS
+// ============================================
+
+export const getCategories = async () => {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('is_active', true)
+    .order('display_order', { ascending: true })
+
+  if (error) throw error
+  return data
+}
+
+export const getCategoryBySlug = async (slug: string) => {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('slug', slug)
+    .eq('is_active', true)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+// ============================================
+// HOLIDAY DEALS HELPERS
+// ============================================
+
+export const getActiveHolidayDeals = async () => {
+  const now = new Date().toISOString()
+  const { data, error } = await supabase
+    .from('holiday_deals')
+    .select(`
+      *,
+      product_deals(
+        product:products(
+          *,
+          images:product_images(id, image, is_primary, display_order)
+        ),
+        discounted_price
+      )
+    `)
+    .eq('is_active', true)
+    .lte('start_date', now)
+    .gte('end_date', now)
+    .order('start_date', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export const getHolidayDealBySlug = async (slug: string) => {
+  const { data, error } = await supabase
+    .from('holiday_deals')
+    .select(`
+      *,
+      product_deals(
+        product:products(
+          *,
+          category:categories(id, title, slug),
+          images:product_images(id, image, is_primary, display_order)
+        ),
+        discounted_price
+      )
+    `)
+    .eq('slug', slug)
+    .eq('is_active', true)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+// ============================================
+// CART HELPERS (Guest & Authenticated)
+// ============================================
+
+// Guest cart stored in localStorage
+const GUEST_CART_KEY = 'guest_cart'
+
+export interface GuestCartItem {
+  product_id: number
+  quantity: number
+  size?: string
+  color?: string
+}
+
+export const getGuestCart = (): GuestCartItem[] => {
+  const cart = localStorage.getItem(GUEST_CART_KEY)
+  return cart ? JSON.parse(cart) : []
+}
+
+export const setGuestCart = (cart: GuestCartItem[]) => {
+  localStorage.setItem(GUEST_CART_KEY, JSON.stringify(cart))
+}
+
+export const clearGuestCart = () => {
+  localStorage.removeItem(GUEST_CART_KEY)
+}
+
+export const addToGuestCart = (item: GuestCartItem) => {
+  const cart = getGuestCart()
+  const existingIndex = cart.findIndex(
+    i => i.product_id === item.product_id && i.size === item.size && i.color === item.color
+  )
+
+  if (existingIndex > -1) {
+    cart[existingIndex].quantity += item.quantity
+  } else {
+    cart.push(item)
+  }
+
+  setGuestCart(cart)
+  return cart
+}
+
+export const removeFromGuestCart = (productId: number, size?: string, color?: string) => {
+  const cart = getGuestCart()
+  const filtered = cart.filter(
+    i => !(i.product_id === productId && i.size === size && i.color === color)
+  )
+  setGuestCart(filtered)
+  return filtered
+}
+
+export const updateGuestCartItem = (productId: number, quantity: number, size?: string, color?: string) => {
+  const cart = getGuestCart()
+  const index = cart.findIndex(
+    i => i.product_id === productId && i.size === size && i.color === color
+  )
+
+  if (index > -1) {
+    if (quantity <= 0) {
+      cart.splice(index, 1)
+    } else {
+      cart[index].quantity = quantity
+    }
+  }
+
+  setGuestCart(cart)
+  return cart
+}
+
+// Authenticated user cart in Supabase
+export const getUserCart = async (userId: string) => {
+  // Get or create cart
+  let { data: cart, error: cartError } = await supabase
+    .from('carts')
+    .select('id')
+    .eq('user_id', userId)
+    .single()
+
+  if (cartError && cartError.code === 'PGRST116') {
+    // Cart doesn't exist, create one
+    const { data: newCart, error: createError } = await supabase
+      .from('carts')
+      .insert({ user_id: userId })
+      .select('id')
+      .single()
+
+    if (createError) throw createError
+    cart = newCart
+  } else if (cartError) {
+    throw cartError
+  }
+
+  // Get cart items with product details using the view
+  const { data, error } = await supabase
+    .from('cart_details')
+    .select('*')
+    .eq('cart_id', cart!.id)
+
+  if (error) throw error
+  return { cart: cart!, items: data || [] }
+}
+
+export const addToUserCart = async (userId: string, item: Omit<GuestCartItem, 'product_id'> & { productId: number }) => {
+  // Get or create cart
+  let { data: cart } = await supabase
+    .from('carts')
+    .select('id')
+    .eq('user_id', userId)
+    .single()
+
+  if (!cart) {
+    const { data: newCart, error: createError } = await supabase
+      .from('carts')
+      .insert({ user_id: userId })
+      .select('id')
+      .single()
+
+    if (createError) throw createError
+    cart = newCart
+  }
+
+  // Check if item already exists
+  const { data: existingItem } = await supabase
+    .from('cart_items')
+    .select('*')
+    .eq('cart_id', cart.id)
+    .eq('product_id', item.productId)
+    .eq('size', item.size || null)
+    .eq('color', item.color || null)
+    .maybeSingle()
+
+  if (existingItem) {
+    // Update quantity
+    const { error } = await supabase
+      .from('cart_items')
+      .update({ quantity: existingItem.quantity + item.quantity })
+      .eq('id', existingItem.id)
+
+    if (error) throw error
+  } else {
+    // Insert new item
+    const { error } = await supabase
+      .from('cart_items')
+      .insert({
+        cart_id: cart.id,
+        product_id: item.productId,
+        quantity: item.quantity,
+        size: item.size || null,
+        color: item.color || null,
+      })
+
+    if (error) throw error
+  }
+
+  return getUserCart(userId)
+}
+
+export const updateUserCartItem = async (cartItemId: number, quantity: number) => {
+  if (quantity <= 0) {
+    const { error } = await supabase
+      .from('cart_items')
+      .delete()
+      .eq('id', cartItemId)
+
+    if (error) throw error
+  } else {
+    const { error } = await supabase
+      .from('cart_items')
+      .update({ quantity })
+      .eq('id', cartItemId)
+
+    if (error) throw error
+  }
+}
+
+export const removeFromUserCart = async (cartItemId: number) => {
+  const { error } = await supabase
+    .from('cart_items')
+    .delete()
+    .eq('id', cartItemId)
+
+  if (error) throw error
+}
+
+export const clearUserCart = async (userId: string) => {
+  const { data: cart } = await supabase
+    .from('carts')
+    .select('id')
+    .eq('user_id', userId)
+    .single()
+
+  if (cart) {
+    const { error } = await supabase
+      .from('cart_items')
+      .delete()
+      .eq('cart_id', cart.id)
+
+    if (error) throw error
+  }
+}
+
+// Merge guest cart into user cart on login
+export const mergeGuestCartToUser = async (userId: string) => {
+  const guestCart = getGuestCart()
+
+  for (const item of guestCart) {
+    await addToUserCart(userId, {
+      productId: item.product_id,
+      quantity: item.quantity,
+      size: item.size,
+      color: item.color,
+    })
+  }
+
+  clearGuestCart()
+}
+
+// ============================================
+// ORDER HELPERS
+// ============================================
+
+export const createOrder = async (orderData: {
+  userId?: string
+  items: Array<{ productId: number; quantity: number; size?: string; color?: string }>
+  shippingAddressId?: number
+  paymentMethodId?: number
+  notes?: string
+  subtotal: number
+  shippingCost?: number
+  tax?: number
+  discount?: number
+}) => {
+  const totalAmount = orderData.subtotal + (orderData.shippingCost || 0) + (orderData.tax || 0) - (orderData.discount || 0)
+
+  // Create order
+  const { data: order, error: orderError } = await supabase
+    .from('orders')
+    .insert({
+      user_id: orderData.userId || null,
+      subtotal: orderData.subtotal,
+      shipping_cost: orderData.shippingCost || 0,
+      tax: orderData.tax || 0,
+      discount: orderData.discount || 0,
+      total_amount: totalAmount,
+      shipping_address_id: orderData.shippingAddressId || null,
+      payment_method_id: orderData.paymentMethodId || null,
+      notes: orderData.notes || null,
+      status: 'pending',
+      payment_status: 'pending',
+    })
+    .select()
+    .single()
+
+  if (orderError) throw orderError
+
+  // Create order items
+  const orderItems = orderData.items.map(item => ({
+    order_id: order.id,
+    product_id: item.productId,
+    quantity: item.quantity,
+    size: item.size || null,
+    color: item.color || null,
+    price: 0, // Will be set by trigger
+  }))
+
+  const { error: itemsError } = await supabase
+    .from('order_items')
+    .insert(orderItems)
+
+  if (itemsError) throw itemsError
+
+  // Clear cart if user is authenticated
+  if (orderData.userId) {
+    await clearUserCart(orderData.userId)
+  }
+
+  return order
+}
+
+export const getUserOrders = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      order_items(
+        *,
+        product:products(id, title, image, slug)
+      ),
+      shipping_address:shipping_addresses(*),
+      payment_method:payment_methods(*)
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export const getOrderByNumber = async (orderNumber: string) => {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      order_items(
+        *,
+        product:products(
+          id,
+          title,
+          image,
+          slug,
+          images:product_images(id, image, is_primary)
+        )
+      ),
+      shipping_address:shipping_addresses(*),
+      payment_method:payment_methods(*)
+    `)
+    .eq('order_number', orderNumber)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+// ============================================
+// PROFILE HELPERS
+// ============================================
+
+export const getProfile = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export const updateProfile = async (userId: string, updates: Partial<Database['public']['Tables']['profiles']['Update']>) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', userId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+// ============================================
+// SHIPPING ADDRESS HELPERS
+// ============================================
+
+export const getShippingAddresses = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('shipping_addresses')
+    .select('*')
+    .eq('user_id', userId)
+    .order('is_default', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export const createShippingAddress = async (userId: string, address: {
+  fullName: string
+  phone: string
+  addressLine1: string
+  addressLine2?: string
+  city: string
+  state?: string
+  postalCode?: string
+  country: string
+  isDefault?: boolean
+}) => {
+  const { data, error } = await supabase
+    .from('shipping_addresses')
+    .insert({
+      user_id: userId,
+      full_name: address.fullName,
+      phone: address.phone,
+      address_line1: address.addressLine1,
+      address_line2: address.addressLine2 || null,
+      city: address.city,
+      state: address.state || null,
+      postal_code: address.postalCode || null,
+      country: address.country,
+      is_default: address.isDefault || false,
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+// ============================================
+// PAYMENT METHOD HELPERS
+// ============================================
+
+export const getPaymentMethods = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('payment_methods')
+    .select('*')
+    .eq('user_id', userId)
+    .order('is_default', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+// ============================================
+// REVIEW HELPERS
+// ============================================
+
+export const getProductReviews = async (productId: number) => {
+  const { data, error } = await supabase
+    .from('product_reviews')
+    .select(`
+      *,
+      user:profiles(username, image)
+    `)
+    .eq('product_id', productId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export const createReview = async (userId: string, review: {
+  productId: number
+  rating: number
+  comment: string
+}) => {
+  const { data, error } = await supabase
+    .from('product_reviews')
+    .insert({
+      user_id: userId,
+      product_id: review.productId,
+      rating: review.rating,
+      comment: review.comment,
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export default supabase

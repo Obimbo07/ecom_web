@@ -9,26 +9,29 @@ const SignUp = () => {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const { register, loading } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(''); // Clear previous errors
-    setLoading(true); // Start loading
+    
     try {
       await register(username, email, password);
-      navigate('/');
+      // Show success message if email confirmation is required
+      navigate('/login', { 
+        state: { 
+          message: 'Registration successful! Please check your email to confirm your account.' 
+        } 
+      });
     } catch (err: any) {
-      setError(err.message); // Set the specific error message from the thrown Error
-    } finally {
-      setLoading(false); // Stop loading
+      setError(err.message || 'Registration failed. Please try again.');
     }
   };
 
   const handleSocialLogin = (provider: string) => {
     console.log(`Logging in with ${provider}`);
+    // TODO: Implement social login with Supabase OAuth
   };
 
   return (
@@ -52,22 +55,26 @@ const SignUp = () => {
             onChange={(e) => setUsername(e.target.value)}
             className="w-full p-3 bg-white rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={loading}
+            required
           />
           <input
-            type="text"
+            type="email"
             placeholder="Email Address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full p-3 bg-white rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={loading}
+            required
           />
           <input
             type="password"
-            placeholder="Password"
+            placeholder="Password (min. 6 characters)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full p-3 bg-white rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={loading}
+            required
+            minLength={6}
           />
           <div className="flex items-center justify-between">
             <label className="flex items-center text-white">

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api from '../api';
 import { FaFacebookF, FaInstagram, FaGoogle } from 'react-icons/fa';
 
 const Login = () => {
@@ -9,30 +8,24 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, loading } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(''); // Clear previous errors
-    setLoading(true); // Start loading
+    
     try {
-      const response = await api.post('users/login/', { email, password });
-      console.log(response, 'api sign response')
-      localStorage.setItem('token', response.data.access_token);
-      localStorage.setItem('refresh_token', response.data.refresh_token);
-      login();
+      await login(email, password);
       navigate('/');
-    } catch (err) {
-      setError('Login failed. Check your credentials.');
-    } finally {
-      setLoading(false); // Stop loading
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Check your credentials.');
     }
   };
 
   const handleSocialLogin = (provider: string) => {
     console.log(`Logging in with ${provider}`);
+    // TODO: Implement social login with Supabase OAuth
   };
 
   return (
@@ -56,6 +49,7 @@ const Login = () => {
             onChange={(e) => setEmail(e.target.value)}
             className="w-full p-3 bg-white rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={loading}
+            required
           />
           <input
             type="password"
@@ -64,6 +58,7 @@ const Login = () => {
             onChange={(e) => setPassword(e.target.value)}
             className="w-full p-3 bg-white rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={loading}
+            required
           />
           <div className="flex items-center justify-between">
             <label className="flex items-center text-white">
@@ -84,7 +79,7 @@ const Login = () => {
             }`}
             disabled={loading}
           >
-            {loading ? 'Signing In...' : 'SIGN IN'} {/* Change text */}
+            {loading ? 'Signing In...' : 'SIGN IN'}
           </button>
         </form>
         <div className="text-center mt-6">
@@ -99,7 +94,7 @@ const Login = () => {
             <button
               onClick={() => handleSocialLogin('facebook')}
               className="text-blue-600 hover:text-blue-800"
-              disabled={loading} // Optional
+              disabled={loading}
             >
               <FaFacebookF size={24} />
             </button>
