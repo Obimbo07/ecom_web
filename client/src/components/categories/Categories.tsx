@@ -1,29 +1,35 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../../api';
+import { getCategories } from '../../lib/supabase';
 
-// Define Category interface based on CategoryResponse
+// Define Category interface based on Supabase schema
 interface Category {
   id: number;
   title: string;
-  image: string | null; // Base64-encoded image
+  slug: string | null;
+  image: string | null;
+  description: string | null;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
 }
 
 const Categories = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<string>('Women'); // Default tab
+  const [activeTab, setActiveTab] = useState<string>('All'); // Default tab
 
-  // Fetch categories
+  // Fetch categories from Supabase
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/categories/');
-        setCategories(response.data);
+        const data = await getCategories();
+        setCategories(data || []);
       } catch (err: any) {
-        setError(err.response?.data?.detail || 'Failed to fetch categories.');
+        console.error('Error fetching categories:', err);
+        setError(err.message || 'Failed to fetch categories.');
       } finally {
         setLoading(false);
       }
@@ -31,12 +37,13 @@ const Categories = () => {
     fetchCategories();
   }, []);
 
-  // Filter categories based on active tab (mock filtering for demo)
+  // Filter categories based on active tab
   const filteredCategories = categories.filter((category) => {
+    if (activeTab === 'All') return true;
     if (activeTab === 'Women') return category.title.toLowerCase().includes('women');
     if (activeTab === 'Men') return category.title.toLowerCase().includes('men');
     if (activeTab === 'Kids') return category.title.toLowerCase().includes('kids');
-    return true; // Default: show all
+    return true;
   });
 
   if (loading) {
@@ -61,7 +68,7 @@ const Categories = () => {
 
       {/* Tabs */}
       <div className="flex space-x-4 mb-4">
-        {['Women', 'Men', 'Kids'].map((tab) => (
+        {['All', 'Women', 'Men', 'Kids'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -85,7 +92,7 @@ const Categories = () => {
         {filteredCategories.map((category) => (
           <Link
             key={category.id}
-            to={`/category/${category.id}`}
+            to={`/category/${category.slug || category.id}`}
             className="flex items-center bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition"
           >
             {/* Category Image */}
@@ -103,7 +110,12 @@ const Categories = () => {
               )}
             </div>
             {/* Category Title */}
-            <h3 className="text-lg font-semibold">{category.title}</h3>
+            <div>
+              <h3 className="text-lg font-semibold">{category.title}</h3>
+              {category.description && (
+                <p className="text-sm text-gray-600 mt-1 line-clamp-2">{category.description}</p>
+              )}
+            </div>
           </Link>
         ))}
       </div>

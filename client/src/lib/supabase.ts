@@ -196,6 +196,29 @@ export const getCategoryBySlug = async (slug: string) => {
   return data
 }
 
+export const getCategoryById = async (id: number) => {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .eq('id', id)
+    .eq('is_active', true)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export const getCategoryByIdOrSlug = async (identifier: string | number) => {
+  // Check if identifier is a number (ID) or string (slug)
+  const isId = !isNaN(Number(identifier))
+  
+  if (isId) {
+    return getCategoryById(Number(identifier))
+  } else {
+    return getCategoryBySlug(String(identifier))
+  }
+}
+
 // ============================================
 // HOLIDAY DEALS HELPERS
 // ============================================
