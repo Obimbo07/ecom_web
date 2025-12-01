@@ -501,13 +501,26 @@ export const createOrder = async (orderData: {
   tax?: number
   discount?: number
 }) => {
+  console.log('Creating order with data:', orderData)
+  
+  // Validate items
+  const invalidItems = orderData.items.filter(item => !item.productId || typeof item.productId !== 'number')
+  if (invalidItems.length > 0) {
+    console.error('Invalid items found:', invalidItems)
+    throw new Error('Invalid product IDs in cart items')
+  }
+  
   const totalAmount = orderData.subtotal + (orderData.shippingCost || 0) + (orderData.tax || 0) - (orderData.discount || 0)
+
+  // Generate order number
+  const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
 
   // Create order
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .insert({
       user_id: orderData.userId || null,
+      order_number: orderNumber,
       subtotal: orderData.subtotal,
       shipping_cost: orderData.shippingCost || 0,
       tax: orderData.tax || 0,
@@ -517,32 +530,75 @@ export const createOrder = async (orderData: {
       payment_method_id: orderData.paymentMethodId || null,
       notes: orderData.notes || null,
       status: 'pending',
-      payment_status: 'pending',
+      payment_status: 'unpaid',
     })
     .select()
     .single()
 
-  if (orderError) throw orderError
+  if (orderError) {
+    console.error('Order creation error:', orderError)
+    throw orderError
+  }
 
-  // Create order items
-  const orderItems = orderData.items.map(item => ({
-    order_id: order.id,
-    product_id: item.productId,
-    quantity: item.quantity,
-    size: item.size || null,
-    color: item.color || null,
-    price: 0, // Will be set by trigger
-  }))
+  console.log('Order created:', order)
+
+  // Fetch product details for each item
+  const productIds = orderData.items.map(item => item.productId)
+  console.log('Fetching products:', productIds)
+  
+  const { data: products, error: productsError } = await supabase
+    .from('products')
+    .select('id, title, price, image, images:product_images(id, image, alt_text, display_order)')
+    .in('id', productIds)
+
+  if (productsError) {
+    console.error('Products fetch error:', productsError)
+    throw productsError
+  }
+
+  console.log('Products fetched:', products)
+
+  // Create order items with product details
+  const orderItems = orderData.items.map(item => {
+    const product = products?.find((p: any) => p.id === item.productId) as any
+    const productImage = product?.images?.[0]?.image || product?.image || null
+    
+    if (!product) {
+      console.warn(`Product not found for ID: ${item.productId}`)
+    }
+    
+    return {
+      order_id: (order as any).id,
+      product_id: item.productId,
+      product_title: product?.title || 'Unknown Product',
+      product_image: productImage,
+      quantity: item.quantity,
+      size: item.size || null,
+      color: item.color || null,
+      price: product?.price || 0,
+      discount_applied: 0,
+    }
+  })
+
+  console.log('Inserting order items:', orderItems)
 
   const { error: itemsError } = await supabase
     .from('order_items')
     .insert(orderItems)
 
-  if (itemsError) throw itemsError
+  if (itemsError) {
+    console.error('Order items insert error:', itemsError)
+    throw itemsError
+  }
+
+  console.log('Order items created successfully')
 
   // Clear cart if user is authenticated
   if (orderData.userId) {
     await clearUserCart(orderData.userId)
+  } else {
+    // Clear guest cart
+    clearGuestCart()
   }
 
   return order
@@ -579,13 +635,39 @@ export const getOrderByNumber = async (orderNumber: string) => {
           title,
           image,
           slug,
-          images:product_images(id, image, is_primary)
+          images:product_images(id, image, alt_text, display_order)
         )
       ),
       shipping_address:shipping_addresses(*),
       payment_method:payment_methods(*)
     `)
     .eq('order_number', orderNumber)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export const getOrderById = async (orderId: number) => {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      order_items(
+        *,
+        product:products(
+          id,
+          title,
+          price,
+          image,
+          slug,
+          images:product_images(id, image, alt_text, display_order)
+        )
+      ),
+      shipping_address:shipping_addresses(*),
+      payment_method:payment_methods(*)
+    `)
+    .eq('id', orderId)
     .single()
 
   if (error) throw error
@@ -601,9 +683,33 @@ export const getProfile = async (userId: string) => {
     .from('profiles')
     .select('*')
     .eq('id', userId)
-    .single()
+    .maybeSingle()
 
   if (error) throw error
+  
+  // If no profile exists, create a default one
+  if (!data) {
+    const { data: userData } = await supabase.auth.getUser()
+    const email = userData?.user?.email || ''
+    
+    const { data: newProfile, error: createError } = await supabase
+      .from('profiles')
+      .insert({
+        id: userId,
+        username: email.split('@')[0] || 'user',
+        full_name: null,
+        bio: null,
+        phone: null,
+        image: null,
+        verified: false,
+      })
+      .select()
+      .single()
+    
+    if (createError) throw createError
+    return newProfile
+  }
+  
   return data
 }
 
@@ -666,6 +772,48 @@ export const createShippingAddress = async (userId: string, address: {
   return data
 }
 
+export const updateShippingAddress = async (addressId: number, address: {
+  fullName?: string
+  phone?: string
+  addressLine1?: string
+  addressLine2?: string
+  city?: string
+  state?: string
+  postalCode?: string
+  country?: string
+  isDefault?: boolean
+}) => {
+  const updates: Record<string, any> = {}
+  if (address.fullName !== undefined) updates.full_name = address.fullName
+  if (address.phone !== undefined) updates.phone = address.phone
+  if (address.addressLine1 !== undefined) updates.address_line1 = address.addressLine1
+  if (address.addressLine2 !== undefined) updates.address_line2 = address.addressLine2
+  if (address.city !== undefined) updates.city = address.city
+  if (address.state !== undefined) updates.state = address.state
+  if (address.postalCode !== undefined) updates.postal_code = address.postalCode
+  if (address.country !== undefined) updates.country = address.country
+  if (address.isDefault !== undefined) updates.is_default = address.isDefault
+
+  const { data, error } = await supabase
+    .from('shipping_addresses')
+    .update(updates)
+    .eq('id', addressId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export const deleteShippingAddress = async (addressId: number) => {
+  const { error } = await supabase
+    .from('shipping_addresses')
+    .delete()
+    .eq('id', addressId)
+
+  if (error) throw error
+}
+
 // ============================================
 // PAYMENT METHOD HELPERS
 // ============================================
@@ -681,6 +829,60 @@ export const getPaymentMethods = async (userId: string) => {
   return data
 }
 
+export const createPaymentMethod = async (userId: string, method: {
+  methodType: string
+  phoneNumber: string
+  lastFour: string
+  isDefault?: boolean
+}) => {
+  const { data, error } = await supabase
+    .from('payment_methods')
+    .insert({
+      user_id: userId,
+      method_type: method.methodType,
+      phone_number: method.phoneNumber,
+      last_four: method.lastFour,
+      is_default: method.isDefault || false,
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export const updatePaymentMethod = async (methodId: number, method: {
+  methodType?: string
+  phoneNumber?: string
+  lastFour?: string
+  isDefault?: boolean
+}) => {
+  const updates: Record<string, any> = {}
+  if (method.methodType !== undefined) updates.method_type = method.methodType
+  if (method.phoneNumber !== undefined) updates.phone_number = method.phoneNumber
+  if (method.lastFour !== undefined) updates.last_four = method.lastFour
+  if (method.isDefault !== undefined) updates.is_default = method.isDefault
+
+  const { data, error } = await supabase
+    .from('payment_methods')
+    .update(updates)
+    .eq('id', methodId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export const deletePaymentMethod = async (methodId: number) => {
+  const { error } = await supabase
+    .from('payment_methods')
+    .delete()
+    .eq('id', methodId)
+
+  if (error) throw error
+}
+
 // ============================================
 // REVIEW HELPERS
 // ============================================
@@ -693,6 +895,20 @@ export const getProductReviews = async (productId: number) => {
       user:profiles(username, image)
     `)
     .eq('product_id', productId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
+export const getUserReviews = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('product_reviews')
+    .select(`
+      *,
+      product:products(id, title, image, slug)
+    `)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
 
   if (error) throw error

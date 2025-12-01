@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import api from '@/api';
+import { useParams, useNavigate } from 'react-router-dom';
 import MpesaModal from '@/components/paymentModal/mpesaModal';
+import { getOrderById } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogTrigger,
@@ -11,37 +13,47 @@ import {
   DialogDescription,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
-// Define interfaces
+// Define interfaces based on Supabase schema
 interface Order {
   id: number;
   created_at: string;
   status: string;
   payment_status: string;
   total_amount: number;
-  items: OrderItem[];
+  order_items: OrderItem[];
+  shipping_address?: Address | null;
+  payment_method?: PaymentMethod | null;
 }
 
 interface OrderItem {
-  product_title: string;
-  size: string;
+  id: number;
+  product_id: number;
   quantity: number;
+  size: string | null;
+  color: string | null;
   price: number;
-  image?: string; // Add image property
-}
-
-interface Product {
-  title: string;
-  image: string;
+  product?: {
+    id: number;
+    title: string;
+    image: string | null;
+    price: number;
+    images?: Array<{
+      id: number;
+      image: string;
+      alt_text: string | null;
+      display_order: number;
+    }>;
+  };
 }
 
 interface Address {
+  id: number;
   address_line1: string;
-  address_line2: string;
+  address_line2: string | null;
   city: string;
-  state: string;
-  postal_code: string;
+  state: string | null;
+  postal_code: string | null;
   country: string;
   phone: string;
   is_default: boolean;
@@ -81,56 +93,69 @@ const PaymentCard = ({ payment }: { payment: PaymentMethod }) => (
 
 const OrderDetails = () => {
   const { orderid } = useParams<{ orderid: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
-  const [address, setAddress] = useState<Address | null>(null);
-  const [payment, setPayment] = useState<PaymentMethod | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
+      // Check if user is authenticated
+      if (!user) {
+        navigate('/signin');
+        return;
+      }
+
+      if (!orderid) return;
+      
       try {
         setLoading(true);
-        const orderResponse = await api.get('api/user/orders/');
-        const selectedOrder = orderResponse.data.find((order: Order) => order.id === Number(orderid));
-        if (!selectedOrder) throw new Error('Order not found');
-
-        const productsResponse = await api.get('api/products/');
-        const products = productsResponse.data;
-
-        const updatedItems = selectedOrder.items.map((item: any) => {
-          const product = products.find((product: Product) => product.title === item.product_title);
-          return {
-            ...item,
-            image: product ? product.image : '', // Set the image if product is found
-          };
-        });
-
-        setOrder({ ...selectedOrder, items: updatedItems });
-
-        const addressResponse = await api.get('users/shipping-addresses');
-        const addressData = addressResponse.data.find((addr: Address) => addr.is_default);
-        setAddress(addressData);
-
-        const paymentResponse = await api.get('users/payment-methods');
-        const paymentData = paymentResponse.data.find((pay: PaymentMethod) => pay.is_default);
-        setPayment(paymentData);
+        const orderData = await getOrderById(Number(orderid));
+        
+        // Verify the order belongs to the current user
+        if ((orderData as any).user_id !== user.id) {
+          setError('You do not have permission to view this order.');
+          return;
+        }
+        
+        setOrder(orderData as Order);
       } catch (err: any) {
-        setError(err.response?.data?.detail || err.message || 'Failed to fetch order details.');
+        console.error('Error fetching order:', err);
+        setError(err.message || 'Failed to fetch order details.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchOrderDetails();
-  }, [orderid]);
+  }, [orderid, user, navigate]);
 
   if (loading) {
     return <div className="text-center py-10">Loading...</div>;
   }
 
   if (error) {
-    return <div className="text-center py-10 text-red-500">{error}</div>;
+    return (
+      <div className="text-center py-10">
+        <div className="text-red-500 mb-4">{error}</div>
+        <Button onClick={() => navigate('/')} className="bg-blue-500 text-white">
+          Back to Home
+        </Button>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="text-center py-10">
+        <h2 className="text-2xl font-semibold mb-4">Authentication Required</h2>
+        <p className="text-gray-600 mb-4">Please sign in to view your order details.</p>
+        <Button onClick={() => navigate('/signin')} className="bg-blue-500 text-white">
+          Sign In
+        </Button>
+      </div>
+    );
   }
 
   if (!order) {
@@ -155,33 +180,36 @@ const OrderDetails = () => {
 
       {/* Order Items */}
       <div className="space-y-4 mb-6">
-        {order.items.map((item, index) => (
-          <div key={index} className="flex items-center bg-white rounded-lg shadow-md p-4">
-            {item.image && (
-              <img
-                src={item.image}
-                alt={item.product_title}
-                className="w-20 h-20 object-cover rounded mr-4"
-              />
-            )}
-            <div>
-              <h4 className="text-lg font-semibold">{item.product_title}</h4>
-              <p className="text-gray-600">Color: Gray</p> {/* Mock color */}
-              <p className="text-gray-600">Size: {item.size || 'N/A'}</p>
-              <p className="text-gray-600">Qty: {item.quantity}</p>
-              <p className="font-semibold">Ksh {item.price}</p>
+        {order.order_items?.map((item, index) => {
+          const productImage = item.product?.images?.[0]?.image || item.product?.image;
+          return (
+            <div key={index} className="flex items-center bg-white rounded-lg shadow-md p-4">
+              {productImage && (
+                <img
+                  src={productImage}
+                  alt={item.product?.title || 'Product'}
+                  className="w-20 h-20 object-cover rounded mr-4"
+                />
+              )}
+              <div>
+                <h4 className="text-lg font-semibold">{item.product?.title || 'Unknown Product'}</h4>
+                {item.color && <p className="text-gray-600">Color: {item.color}</p>}
+                {item.size && <p className="text-gray-600">Size: {item.size}</p>}
+                <p className="text-gray-600">Qty: {item.quantity}</p>
+                <p className="font-semibold">Ksh {item.price.toLocaleString()}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className='flex justify-between mb-4 bg-white rounded-lg shadow-md p-4'>
-        <p className="text-black font-semibold text-2lg">Total Amount: Ksh {order.total_amount}</p>
+        <p className="text-black font-semibold text-2lg">Total Amount: Ksh {order.total_amount.toLocaleString()}</p>
       </div>
 
       {/* Address and Payment Information */}
-      {address && <AddressCard address={address} />}
-      {payment && <PaymentCard payment={payment} />}
+      {order.shipping_address && <AddressCard address={order.shipping_address} />}
+      {order.payment_method && <PaymentCard payment={order.payment_method} />}
 
       {/* Order Information */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">

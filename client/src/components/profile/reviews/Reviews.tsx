@@ -1,49 +1,54 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaStar } from 'react-icons/fa'; // For star ratings
-import api from '@/api';
 import { useAuth } from '@/context/AuthContext';
+import { getUserReviews } from '@/lib/supabase';
 
-// types/review.ts (or wherever you manage your types)
+// Define Review interface based on Supabase schema
 interface Review {
     id: number;
-    user: string;
-    product: number; // Product ID; consider adding product_title if updated serializer
-    rating: number; // 1 to 5 based on RATING choices
-    review_text: string | null; // Optional review text
-    created_at: string; // ISO date string
-    updated_at: string; // ISO date string
-    is_approved: boolean;
+    user_id: string;
+    product_id: number;
+    rating: number;
+    comment: string | null;
+    created_at: string;
+    updated_at: string;
+    is_verified: boolean;
+    product?: {
+        id: number;
+        title: string;
+        slug: string | null;
+        image: string | null;
+    };
 }
 
 
 const Reviews = () => {
-    const [reviews, setReviews] = useState<Review []>([]);
+    const [reviews, setReviews] = useState<Review[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const { isAuthenticated } = useAuth();
+    const { user } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (!isAuthenticated) {
-            navigate('/login');
+        if (!user) {
+            navigate('/signin');
             return;
         }
         fetchReviews();
-    }, [isAuthenticated, navigate]);
+    }, [user, navigate]);
 
     const fetchReviews = async () => {
+        if (!user) return;
+        
         try {
             setLoading(true);
             setError('');
-            const response = await api.get('api/users/reviews/');
-            if (response.data.message === 'No reviews found') {
-                setReviews([]);
-            } else {
-                setReviews(response.data);
-            }
+            const reviewsData = await getUserReviews(user.id);
+            setReviews(reviewsData || []);
         } catch (err: any) {
-            setError(err.response?.data?.detail || 'Failed to fetch reviews. Please try again later.');
+            console.error('Error fetching reviews:', err);
+            setError(err.message || 'Failed to fetch reviews. Please try again later.');
             setReviews([]);
         } finally {
             setLoading(false);
@@ -114,19 +119,35 @@ const Reviews = () => {
                             className="bg-white rounded-lg shadow-md p-4"
                         >
                             <div className="flex justify-between items-start">
-                                <div>
-                                    <h3 className="text-lg font-semibold">
-                                        Product ID: {review.product}
-                                    </h3>
+                                <div className="flex-1">
+                                    {review.product && (
+                                        <div className="flex items-center gap-4 mb-3">
+                                            {review.product.image && (
+                                                <img 
+                                                    src={review.product.image} 
+                                                    alt={review.product.title}
+                                                    className="w-16 h-16 object-cover rounded"
+                                                />
+                                            )}
+                                            <h3 className="text-lg font-semibold">
+                                                {review.product.title}
+                                            </h3>
+                                        </div>
+                                    )}
+                                    {!review.product && (
+                                        <h3 className="text-lg font-semibold mb-3">
+                                            Product ID: {review.product_id}
+                                        </h3>
+                                    )}
                                     <div className="flex items-center mt-1">
                                         {renderStars(review.rating)}
                                         <span className="ml-2 text-gray-600">
                                             {review.rating}/5
                                         </span>
                                     </div>
-                                    {review.review_text && (
+                                    {review.comment && (
                                         <p className="mt-2 text-gray-700">
-                                            {review.review_text}
+                                            {review.comment}
                                         </p>
                                     )}
                                     <p className="mt-2 text-sm text-gray-500">
@@ -137,14 +158,14 @@ const Reviews = () => {
                                     </p>
                                     <p
                                         className={`mt-1 text-sm ${
-                                            review.is_approved
+                                            review.is_verified
                                                 ? 'text-green-500'
                                                 : 'text-orange-500'
                                         }`}
                                     >
-                                        {review.is_approved
-                                            ? 'Approved'
-                                            : 'Pending Approval'}
+                                        {review.is_verified
+                                            ? 'Verified Purchase'
+                                            : 'Not Verified'}
                                     </p>
                                 </div>
                             </div>

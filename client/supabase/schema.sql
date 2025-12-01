@@ -441,6 +441,43 @@ CREATE POLICY "Users can view own order items"
     )
   );
 
+CREATE POLICY "Users can insert own order items"
+  ON order_items FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM orders
+      WHERE orders.id = order_items.order_id
+      AND (orders.user_id = auth.uid() OR orders.user_id IS NULL)
+    )
+  );
+
+CREATE POLICY "Users can update own order items"
+  ON order_items FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM orders
+      WHERE orders.id = order_items.order_id
+      AND orders.user_id = auth.uid()
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM orders
+      WHERE orders.id = order_items.order_id
+      AND orders.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can delete own order items"
+  ON order_items FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM orders
+      WHERE orders.id = order_items.order_id
+      AND orders.user_id = auth.uid()
+    )
+  );
+
 -- ============================================
 -- REVIEWS TABLE
 -- ============================================
