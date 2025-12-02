@@ -81,6 +81,7 @@ CREATE TABLE products (
   price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
   old_price DECIMAL(10,2) CHECK (old_price >= 0),
   image TEXT,
+  images JSONB DEFAULT '[]'::jsonb,
   type TEXT,
   stock_count INTEGER DEFAULT 0 CHECK (stock_count >= 0),
   life TEXT,
@@ -91,7 +92,8 @@ CREATE TABLE products (
   sku TEXT UNIQUE,
   weight DECIMAL(10,2),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT images_is_array CHECK (jsonb_typeof(images) = 'array')
 );
 
 -- Indexes for faster queries
@@ -100,6 +102,7 @@ CREATE INDEX idx_products_active ON products(is_active) WHERE is_active = TRUE;
 CREATE INDEX idx_products_featured ON products(featured) WHERE featured = TRUE;
 CREATE INDEX idx_products_slug ON products(slug);
 CREATE INDEX idx_products_sku ON products(sku);
+CREATE INDEX idx_products_images ON products USING GIN (images);
 
 -- RLS Policies for products
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;

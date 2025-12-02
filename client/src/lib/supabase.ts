@@ -111,8 +111,7 @@ export const getProducts = async (filters?: {
     .from('products')
     .select(`
       *,
-      category:categories(id, title, slug),
-      images:product_images(id, image, alt_text, display_order)
+      category:categories(id, title, slug)
     `)
     .eq('is_active', true)
     .order('created_at', { ascending: false })
@@ -149,7 +148,6 @@ export const getProductBySlug = async (slug: string) => {
     .select(`
       *,
       category:categories(id, title, slug),
-      images:product_images(id, image, is_primary, display_order),
       reviews:product_reviews(id, rating, comment, user:profiles(username, image), created_at)
     `)
     .eq('slug', slug)
@@ -232,7 +230,6 @@ export const getActiveHolidayDeals = async () => {
       product_deals(
         product:products(
           *,
-          images:product_images(id, image, is_primary, display_order)
         ),
         discounted_price
       )
@@ -255,7 +252,6 @@ export const getHolidayDealBySlug = async (slug: string) => {
         product:products(
           *,
           category:categories(id, title, slug),
-          images:product_images(id, image, is_primary, display_order)
         ),
         discounted_price
       )
@@ -548,7 +544,6 @@ export const createOrder = async (orderData: {
   
   const { data: products, error: productsError } = await supabase
     .from('products')
-    .select('id, title, price, image, images:product_images(id, image, alt_text, display_order)')
     .in('id', productIds)
 
   if (productsError) {
@@ -635,7 +630,6 @@ export const getOrderByNumber = async (orderNumber: string) => {
           title,
           image,
           slug,
-          images:product_images(id, image, alt_text, display_order)
         )
       ),
       shipping_address:shipping_addresses(*),
@@ -661,7 +655,6 @@ export const getOrderById = async (orderId: number) => {
           price,
           image,
           slug,
-          images:product_images(id, image, alt_text, display_order)
         )
       ),
       shipping_address:shipping_addresses(*),
@@ -932,6 +925,111 @@ export const createReview = async (userId: string, review: {
     .single()
 
   if (error) throw error
+  return data
+}
+
+// ============================================
+// ADMIN FUNCTIONS
+// ============================================
+
+export const deleteProduct = async (productId: number) => {
+  const { error } = await supabase
+    .from('products')
+    .delete()
+    .eq('id', productId)
+
+  if (error) throw error
+}
+
+export const createProduct = async (productData: {
+  title: string
+  description?: string
+  price: number
+  stock_count: number
+  category_id: number
+  is_active: boolean
+  image?: string
+  images?: string[]
+}) => {
+  const { data, error } = await supabase
+    .from('products')
+    .insert({
+      title: productData.title,
+      description: productData.description || null,
+      price: productData.price,
+      stock_count: productData.stock_count,
+      category_id: productData.category_id,
+      is_active: productData.is_active,
+      image: productData.image || null,
+      images: productData.images || [],
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export const updateProduct = async (productId: number, updates: Database['public']['Tables']['products']['Update']) => {
+  const { data, error } = await supabase
+    .from('products')
+    .update(updates)
+    .eq('id', productId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export const updateOrderStatus = async (orderId: number, status: string) => {
+  const { data, error } = await supabase
+    .from('orders')
+    .update({ status })
+    .eq('id', orderId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export const getAllProducts = async () => {
+  console.log('getAllProducts: Starting fetch...')
+  const { data, error } = await supabase
+    .from('products')
+    .select(`
+      *,
+      category:categories(id, title, slug)
+    `)
+    .order('created_at', { ascending: false })
+
+  console.log('getAllProducts: Response', { data, error, count: data?.length })
+  if (error) {
+    console.error('getAllProducts: Error details', error)
+    throw error
+  }
+  return data
+}
+
+export const getAllOrders = async () => {
+  console.log('getAllOrders: Starting fetch...')
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      profiles!orders_user_id_fkey(id, username, full_name),
+      shipping_addresses!orders_shipping_address_id_fkey(*),
+      payment_methods!orders_payment_method_id_fkey(*),
+      order_items(*)
+    `)
+    .order('created_at', { ascending: false })
+
+  console.log('getAllOrders: Response', { data, error, count: data?.length })
+  if (error) {
+    console.error('getAllOrders: Error details', error)
+    throw error
+  }
   return data
 }
 

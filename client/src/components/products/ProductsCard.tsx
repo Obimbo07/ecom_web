@@ -22,6 +22,7 @@ interface Product {
   price: number;
   old_price: number | null;
   image: string | null;
+  images: string[] | null;
   description: string | null;
   specifications: string | null;
   type: string | null;
@@ -33,12 +34,6 @@ interface Product {
     title: string;
     slug: string | null;
   } | null;
-  images: Array<{
-    id: number;
-    image: string;
-    alt_text: string | null;
-    display_order: number;
-  }>;
 }
 
 interface ProductCardProps {
@@ -58,10 +53,14 @@ export function ProductCard({ product }: ProductCardProps) {
   // Display price
   const displayPrice = product.price;
 
-  // Get primary image (lowest display_order) or first image
-  const primaryImage = product.images && product.images.length > 0
-    ? (product.images.sort((a, b) => a.display_order - b.display_order)[0]?.image || product.images[0].image)
-    : product.image;
+  // Get primary image (main image) or first from images array
+  const primaryImage = product.image || (product.images && product.images.length > 0 ? product.images[0] : null);
+  
+  // Get all images for carousel (combine main image with additional images)
+  const allImages = [
+    ...(product.image ? [product.image] : []),
+    ...(product.images || [])
+  ];
 
   // Render stars based on rating (placeholder; can be enhanced with actual ratings)
   const renderStars = (rating: number) => {
@@ -167,28 +166,15 @@ export function ProductCard({ product }: ProductCardProps) {
                   <div className="relative">
                     <Carousel className="w-full max-w-md mx-auto">
                       <CarouselContent>
-                        {/* Primary image */}
-                        {primaryImage && (
-                          <CarouselItem>
+                        {/* All images - primary first, then additional */}
+                        {allImages.map((imageUrl, index) => (
+                          <CarouselItem key={index}>
                             <img
-                              src={primaryImage}
-                              alt={product.title}
+                              src={imageUrl}
+                              alt={`${product.title} view ${index + 1}`}
                               className="w-full h-64 object-cover rounded-lg"
                             />
                           </CarouselItem>
-                        )}
-                        {/* Additional images */}
-                        {product.images && product.images.length > 1 && product.images
-                          .sort((a, b) => a.display_order - b.display_order)
-                          .slice(1) // Skip the first image (primary)
-                          .map((img) => (
-                            <CarouselItem key={img.id}>
-                              <img
-                                src={img.image}
-                                alt={img.alt_text || `${product.title} view ${img.display_order}`}
-                                className="w-full h-64 object-cover rounded-lg"
-                              />
-                            </CarouselItem>
                           ))}
                       </CarouselContent>
                       {product.images && product.images.length > 1 && (

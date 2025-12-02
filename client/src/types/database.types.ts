@@ -19,6 +19,7 @@ export interface Database {
           phone: string | null
           image: string | null
           verified: boolean
+          role: string
           created_at: string
           updated_at: string
         }
@@ -30,6 +31,7 @@ export interface Database {
           phone?: string | null
           image?: string | null
           verified?: boolean
+          role?: string
           created_at?: string
           updated_at?: string
         }
@@ -41,6 +43,7 @@ export interface Database {
           phone?: string | null
           image?: string | null
           verified?: boolean
+          role?: string
           created_at?: string
           updated_at?: string
         }
@@ -109,6 +112,7 @@ export interface Database {
           price: number
           old_price: number | null
           image: string | null
+          images: Json
           type: string | null
           stock_count: number
           life: string | null
@@ -129,6 +133,7 @@ export interface Database {
           price: number
           old_price?: number | null
           image?: string | null
+          images?: Json
           type?: string | null
           stock_count?: number
           life?: string | null
@@ -149,6 +154,7 @@ export interface Database {
           price?: number
           old_price?: number | null
           image?: string | null
+          images?: Json
           type?: string | null
           stock_count?: number
           life?: string | null
@@ -376,8 +382,11 @@ export interface Database {
           id: number
           order_id: number
           product_id: number
+          product_title: string
+          product_image: string | null
           quantity: number
           price: number
+          discount_applied: number
           size: string | null
           color: string | null
           created_at: string
@@ -386,8 +395,11 @@ export interface Database {
           id?: number
           order_id: number
           product_id: number
+          product_title: string
+          product_image?: string | null
           quantity: number
-          price?: number
+          price: number
+          discount_applied?: number
           size?: string | null
           color?: string | null
           created_at?: string
@@ -396,8 +408,11 @@ export interface Database {
           id?: number
           order_id?: number
           product_id?: number
+          product_title?: string
+          product_image?: string | null
           quantity?: number
           price?: number
+          discount_applied?: number
           size?: string | null
           color?: string | null
           created_at?: string
@@ -454,9 +469,9 @@ export interface Database {
         Row: {
           id: number
           user_id: string
-          type: string
-          provider: string | null
-          account_number: string | null
+          method_type: string
+          phone_number: string
+          last_four: string
           is_default: boolean
           created_at: string
           updated_at: string
@@ -464,9 +479,9 @@ export interface Database {
         Insert: {
           id?: number
           user_id: string
-          type: string
-          provider?: string | null
-          account_number?: string | null
+          method_type: string
+          phone_number: string
+          last_four: string
           is_default?: boolean
           created_at?: string
           updated_at?: string
@@ -474,9 +489,9 @@ export interface Database {
         Update: {
           id?: number
           user_id?: string
-          type?: string
-          provider?: string | null
-          account_number?: string | null
+          method_type?: string
+          phone_number?: string
+          last_four?: string
           is_default?: boolean
           created_at?: string
           updated_at?: string

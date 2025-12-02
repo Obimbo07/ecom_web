@@ -18,12 +18,19 @@ import ShippingAddressScreen from './components/profile/address/ShippingAddressS
 import PaymentMethodScreen from './components/profile/payments/PaymentMethodScreen';
 import SettingsScreen from './components/profile/settings/SettingsScreen';
 import Reviews from './components/profile/reviews/Reviews';
+import AdminRoute from './components/admin/AdminRoute';
+import AdminLayout from './components/admin/AdminLayout';
+import ProductsManagement from './pages/admin/ProductsManagement';
+import OrdersManagement from './pages/admin/OrdersManagement';
+
 // Component to conditionally render Navbar
 const AppContent = () => {
   const location = useLocation();
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  // Hide navbar on /login and /register routes
-  const hideNavbar = location.pathname === '/login' || location.pathname === '/register';
+  // Hide navbar on /login, /register and /admin routes
+  const hideNavbar = location.pathname === '/login' || 
+                     location.pathname === '/register' || 
+                     location.pathname.startsWith('/admin');
   
   useEffect(() => {
     const handleBeforeInstallPrompt = (event: any) => {
@@ -60,7 +67,30 @@ const AppContent = () => {
           <Route path="/profile/payment-methods" element={<PaymentMethodScreen />} />
            {/*<Route path="/profile/promocodes" element={<Promocodes />} /> */} 
           <Route path="/profile/reviews" element={<Reviews />} />
-          <Route path="/profile/settings" element={<SettingsScreen />} />" 
+          <Route path="/profile/settings" element={<SettingsScreen />} />
+          
+          {/* Admin Routes */}
+          <Route path="/admin" element={
+            <AdminRoute>
+              <AdminLayout>
+                <ProductsManagement />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/products" element={
+            <AdminRoute>
+              <AdminLayout>
+                <ProductsManagement />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/orders" element={
+            <AdminRoute>
+              <AdminLayout>
+                <OrdersManagement />
+              </AdminLayout>
+            </AdminRoute>
+          } />
         </Routes>
       </main>
       {!hideNavbar && <Navbar />}
