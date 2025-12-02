@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import api from '../../../api';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { getOrderById, getShippingAddresses, getPaymentMethods } from '@/lib/supabase';
 import MpesaModal from '@/components/paymentModal/mpesaModal';
 import {
   Dialog,
@@ -16,32 +17,32 @@ import { Button } from "@/components/ui/button";
 // Define interfaces
 interface Order {
   id: number;
+  order_number: string;
   created_at: string;
   status: string;
   payment_status: string;
   total_amount: number;
-  items: OrderItem[];
+  order_items: OrderItem[];
 }
 
 interface OrderItem {
+  id: number;
+  product_id: number;
   product_title: string;
-  size: string;
+  product_image: string | null;
+  size: string | null;
+  color: string | null;
   quantity: number;
   price: number;
-  image?: string; // Add image property
-}
-
-interface Product {
-  title: string;
-  image: string;
 }
 
 interface Address {
+  id: number;
   address_line1: string;
-  address_line2: string;
+  address_line2: string | null;
   city: string;
-  state: string;
-  postal_code: string;
+  state: string | null;
+  postal_code: string | null;
   country: string;
   phone: string;
   is_default: boolean;
@@ -81,6 +82,8 @@ const PaymentCard = ({ payment }: { payment: PaymentMethod }) => (
 
 const OrderDetails = () => {
   const { orderId } = useParams<{ orderId: string }>();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [order, setOrder] = useState<Order | null>(null);
   const [address, setAddress] = useState<Address | null>(null);
   const [payment, setPayment] = useState<PaymentMethod | null>(null);
@@ -89,41 +92,60 @@ const OrderDetails = () => {
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
+      if (!user) {
+        navigate('/signin');
+        return;
+      }
+
+      if (!orderId) {
+        setError('Invalid order ID');
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
-        const orderResponse = await api.get('api/user/orders/');
-        const selectedOrder = orderResponse.data.find((order: Order) => order.id === Number(orderId));
-        if (!selectedOrder) throw new Error('Order not found');
+        setError('');
 
-        const productsResponse = await api.get('api/products/');
-        const products = productsResponse.data;
+        // Fetch order by ID from Supabase
+        const orderData = await getOrderById(parseInt(orderId));
+        
+        if (!orderData) {
+          setError('Order not found');
+          return;
+        }
 
-        const updatedItems = selectedOrder.items.map((item: any) => {
-          const product = products.find((product: Product) => product.title === item.product_title);
-          return {
-            ...item,
-            image: product ? product.image : '', // Set the image if product is found
-          };
-        });
+        // Verify order belongs to current user
+        if ((orderData as any).user_id !== user.id) {
+          setError('You do not have permission to view this order');
+          return;
+        }
 
-        setOrder({ ...selectedOrder, items: updatedItems });
+        setOrder(orderData as Order);
 
-        const addressResponse = await api.get('users/shipping-addresses/');
-        const addressData = addressResponse.data.find((addr: Address) => addr.is_default);
-        setAddress(addressData);
+        // Fetch default shipping address
+        const addressesData = await getShippingAddresses(user.id);
+        const defaultAddress = addressesData.find((addr: Address) => addr.is_default);
+        if (defaultAddress) {
+          setAddress(defaultAddress);
+        }
 
-        const paymentResponse = await api.get('users/payment-methods/');
-        const paymentData = paymentResponse.data.find((pay: PaymentMethod) => pay.is_default);
-        setPayment(paymentData);
+        // Fetch default payment method
+        const paymentsData = await getPaymentMethods(user.id);
+        const defaultPayment = paymentsData.find((pay: PaymentMethod) => pay.is_default);
+        if (defaultPayment) {
+          setPayment(defaultPayment);
+        }
       } catch (err: any) {
-        setError(err.response?.data?.detail || err.message || 'Failed to fetch order details.');
+        console.error('Error fetching order details:', err);
+        setError(err.message || 'Failed to fetch order details');
       } finally {
         setLoading(false);
       }
     };
 
     fetchOrderDetails();
-  }, [orderId]);
+  }, [orderId, user, navigate]);
 
   if (loading) {
     return <div className="text-center py-10">Loading...</div>;
@@ -139,44 +161,44 @@ const OrderDetails = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
-      <h2 className="text-2xl font-semibold mb-6">Order #{order.id}</h2>
-      <p className="text-gray-600 mb-4">{order.created_at}</p>
+      <h2 className="text-2xl font-semibold mb-6">Order #{order.order_number || order.id}</h2>
+      <p className="text-gray-600 mb-4">{new Date(order.created_at).toLocaleDateString()}</p>
       
       <div className='flex capitalize justify-between mb-4 bg-white rounded-lg shadow-md p-4'>
         <p>Order Status:</p>
-        <p className={`text-sm ${order.status === 'Delivered' ? 'text-green-600' : 'text-yellow-600'}`}>
+        <p className={`text-sm ${order.status === 'delivered' ? 'text-green-600' : 'text-yellow-600'}`}>
           {order.status}
         </p>
         <p>Payment Status:</p>
-        <p className={`text-sm ${order.payment_status === 'Paid' ? 'text-green-600' : 'text-yellow-600'}`}>
+        <p className={`text-sm ${order.payment_status === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}>
           {order.payment_status}
         </p>
       </div>
 
       {/* Order Items */}
       <div className="space-y-4 mb-6">
-        {order.items.map((item, index) => (
-          <div key={index} className="flex items-center bg-white rounded-lg shadow-md p-4">
-            {item.image && (
+        {order.order_items.map((item) => (
+          <div key={item.id} className="flex items-center bg-white rounded-lg shadow-md p-4">
+            {item.product_image && (
               <img
-                src={item.image}
+                src={item.product_image}
                 alt={item.product_title}
                 className="w-20 h-20 object-cover rounded mr-4"
               />
             )}
             <div>
               <h4 className="text-lg font-semibold">{item.product_title}</h4>
-              <p className="text-gray-600">Color: Gray</p> {/* Mock color */}
-              <p className="text-gray-600">Size: {item.size || 'N/A'}</p>
+              {item.color && <p className="text-gray-600">Color: {item.color}</p>}
+              {item.size && <p className="text-gray-600">Size: {item.size}</p>}
               <p className="text-gray-600">Qty: {item.quantity}</p>
-              <p className="font-semibold">Ksh {item.price}</p>
+              <p className="font-semibold">Ksh {item.price.toFixed(2)}</p>
             </div>
           </div>
         ))}
       </div>
 
       <div className='flex justify-between mb-4 bg-white rounded-lg shadow-md p-4'>
-        <p className="text-black font-semibold text-2lg">Total Amount: Ksh {order.total_amount}</p>
+        <p className="text-black font-semibold text-2lg">Total Amount: Ksh {order.total_amount.toFixed(2)}</p>
       </div>
 
       {/* Address and Payment Information */}
@@ -186,10 +208,9 @@ const OrderDetails = () => {
       {/* Order Information */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
         <h4 className="text-lg font-semibold mb-2">Order Information</h4>
-        <p className="text-gray-600">Tracking #: IW34753455</p> {/* Mock tracking number */}
-        <p className="text-gray-600">Delivery Method: FedEx, 3 days</p>
-        <p className="text-gray-600">Discount: 10%, Personal Promo Code</p>
-        <p className="text-gray-600">Total Amount: Ksh {order.total_amount}</p>
+        <p className="text-gray-600">Order Number: {order.order_number || order.id}</p>
+        <p className="text-gray-600">Order Date: {new Date(order.created_at).toLocaleDateString()}</p>
+        <p className="text-gray-600">Total Amount: Ksh {order.total_amount.toFixed(2)}</p>
       </div>
 
       {/* Actions */}

@@ -3,8 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
-import api from '@/api';
 import { useAuth } from '@/context/AuthContext';
+import { 
+  getShippingAddresses, 
+  createShippingAddress, 
+  updateShippingAddress, 
+  deleteShippingAddress 
+} from '@/lib/supabase';
 
 interface ShippingAddress {
   id: number;
@@ -26,52 +31,89 @@ const ShippingAddressScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedAddress, setSelectedAddress] = useState<ShippingAddress | null>(null);
-  const { isAuthenticated } = useAuth();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isAuthenticated) navigate('/login');
+    if (!user) {
+      navigate('/signin');
+      return;
+    }
     fetchAddresses();
-  }, [isAuthenticated, navigate]);
+  }, [user, navigate]);
 
   const fetchAddresses = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
-      const response = await api.get('users/shipping-addresses/');
-      setAddresses(response.data);
+      setError('');
+      const data = await getShippingAddresses(user.id);
+      setAddresses(data as ShippingAddress[]);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to fetch shipping addresses.');
+      console.error('Error fetching addresses:', err);
+      setError(err.message || 'Failed to fetch shipping addresses.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleAddAddress = async (formData: any) => {
+    if (!user) return;
+    
     try {
-      const response = await api.post('users/shipping-addresses/', formData);
-      setAddresses([...addresses, response.data]);
-      setSelectedAddress(null); // Close drawer
+      const newAddress = await createShippingAddress(user.id, {
+        fullName: formData.full_name,
+        phone: formData.phone,
+        addressLine1: formData.address_line1,
+        addressLine2: formData.address_line2,
+        city: formData.city,
+        state: formData.state,
+        postalCode: formData.postal_code,
+        country: formData.country,
+        isDefault: formData.is_default,
+      });
+      setAddresses([...addresses, newAddress as ShippingAddress]);
+      setSelectedAddress(null);
+      setIsDrawerOpen(false);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to add shipping address.');
+      console.error('Error adding address:', err);
+      setError(err.message || 'Failed to add shipping address.');
     }
   };
 
   const handleUpdateAddress = async (id: number, formData: any) => {
     try {
-      const response = await api.put(`users/shipping-addresses/${id}/`, formData);
-      setAddresses(addresses.map(addr => addr.id === id ? response.data : addr));
-      setSelectedAddress(null); // Close drawer
+      const updatedAddress = await updateShippingAddress(id, {
+        fullName: formData.full_name,
+        phone: formData.phone,
+        addressLine1: formData.address_line1,
+        addressLine2: formData.address_line2,
+        city: formData.city,
+        state: formData.state,
+        postalCode: formData.postal_code,
+        country: formData.country,
+        isDefault: formData.is_default,
+      });
+      setAddresses(addresses.map(addr => addr.id === id ? updatedAddress as ShippingAddress : addr));
+      setSelectedAddress(null);
+      setIsDrawerOpen(false);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to update shipping address.');
+      console.error('Error updating address:', err);
+      setError(err.message || 'Failed to update shipping address.');
     }
   };
 
   const handleDeleteAddress = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this address?')) return;
+    
     try {
-      await api.delete(`users/shipping-addresses/${id}/`);
+      await deleteShippingAddress(id);
       setAddresses(addresses.filter(addr => addr.id !== id));
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to delete shipping address.');
+      console.error('Error deleting address:', err);
+      setError(err.message || 'Failed to delete shipping address.');
     }
   };
 
@@ -90,9 +132,12 @@ const ShippingAddressScreen = () => {
     <div className="min-h-screen bg-gray-100 p-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-semibold">Shipping Addresses</h2>
-        <Drawer>
+        <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
           <DrawerTrigger asChild>
-            <Button className="bg-blue-500 text-white">
+            <Button className="bg-blue-500 text-white" onClick={() => {
+              setSelectedAddress(null);
+              setIsDrawerOpen(true);
+            }}>
               <FaPlus className="mr-2" /> Add Address
             </Button>
           </DrawerTrigger>
@@ -212,9 +257,16 @@ const ShippingAddressScreen = () => {
                 {address.is_default && <p className="text-green-500">Default</p>}
               </div>
               <div className="space-x-2">
-                <Button variant="ghost" onClick={() => setSelectedAddress(address)}>
-                  <FaEdit />
-                </Button>
+                <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+                  <DrawerTrigger asChild>
+                    <Button variant="ghost" onClick={() => {
+                      setSelectedAddress(address);
+                      setIsDrawerOpen(true);
+                    }}>
+                      <FaEdit />
+                    </Button>
+                  </DrawerTrigger>
+                </Drawer>
                 <Button variant="ghost" onClick={() => handleDeleteAddress(address.id)}>
                   <FaTrash className="text-red-500" />
                 </Button>

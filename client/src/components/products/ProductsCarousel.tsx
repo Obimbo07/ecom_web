@@ -7,38 +7,40 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel';
 import ProductCard from './ProductsCard';
-import api from '../../api';
-
-interface HolidayDeal {
-  deal_id: string;
-  name: string;
-  discount_percentage: number;
-  discounted_price: number;
-  start_date: string;
-  end_date: string;
-}
+import { getProducts } from '@/lib/supabase';
 
 interface Product {
   id: number;
   title: string;
   price: number;
-  old_price: number;
+  old_price: number | null;
   image: string | null;
-  description: string;
+  description: string | null;
   specifications: string | null;
-  type: string;
-  stock_count: string;
-  life: string;
-  additional_images: { id: number; image: string | null; date: string }[];
-  holiday_deals: HolidayDeal | null;
+  type: string | null;
+  stock_count: number;
+  slug: string | null;
+  featured: boolean;
+  category: {
+    id: number;
+    title: string;
+    slug: string | null;
+  } | null;
+  images: Array<{
+    id: number;
+    image: string;
+    alt_text: string | null;
+    display_order: number;
+  }>;
 }
-
 
 interface ProductsCarouselProps {
   categoryId?: number;
+  featured?: boolean;
+  limit?: number;
 }
 
-export function ProductsCarousel({ categoryId }: ProductsCarouselProps) {
+export function ProductsCarousel({ categoryId, featured, limit = 10 }: ProductsCarouselProps) {
   const [products, setProducts] = React.useState<Product[]>([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -46,11 +48,12 @@ export function ProductsCarousel({ categoryId }: ProductsCarouselProps) {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const url = categoryId
-          ? `/api/products/category/${categoryId}/`
-          : '/api/products/';
-        const response = await api.get(url);
-        setProducts(response.data.slice(0, 5));
+        const data = await getProducts({
+          categoryId,
+          featured,
+          limit,
+        });
+        setProducts(data);
       } catch (err) {
         console.error('Error fetching products:', err);
       } finally {
@@ -58,14 +61,26 @@ export function ProductsCarousel({ categoryId }: ProductsCarouselProps) {
       }
     };
     fetchProducts();
-  }, [categoryId]);
+  }, [categoryId, featured, limit]);
 
   if (loading) {
-    return <div className="text-center py-4">Loading products...</div>;
+    return (
+      <div className="text-center py-4">
+        <div className="animate-pulse flex space-x-4">
+          <div className="flex-1 space-y-4 py-1">
+            <div className="h-40 bg-gray-300 rounded"></div>
+            <div className="space-y-2">
+              <div className="h-4 bg-gray-300 rounded"></div>
+              <div className="h-4 bg-gray-300 rounded w-5/6"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (products.length === 0) {
-    return <div className="text-center py-4">No products available</div>;
+    return <div className="text-center py-4 text-gray-500">No products available</div>;
   }
 
   return (

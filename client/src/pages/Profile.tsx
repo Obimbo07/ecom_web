@@ -1,16 +1,27 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import api from '../api';
 import { FaArrowRight, FaUserAlt } from 'react-icons/fa';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
+import { 
+  getProfile, 
+  getUserOrders, 
+  getUserReviews, 
+  getShippingAddresses, 
+  getPaymentMethods 
+} from '@/lib/supabase';
 
-// Define interfaces based on API responses
-interface User {
+// Define interfaces based on Supabase schema
+interface Profile {
+  id: string;
   username: string;
-  email: string;
-  image: string;
-  profile: { bio: string; full_name: string; image: string | null; phone: number; verified: boolean };
+  full_name: string | null;
+  bio: string | null;
+  phone: string | null;
+  image: string | null;
+  verified: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 interface Order {
@@ -19,83 +30,133 @@ interface Order {
   status: string;
   payment_status: string;
   created_at: string;
-  items: { product_title: string; quantity: number; price: number }[];
+  order_items?: Array<{
+    product_title: string;
+    quantity: number;
+    price: number;
+  }>;
 }
 
 interface Review {
   id: number;
-  product: number;
+  product_id: number;
   rating: number;
-  review_text: string | null;
+  comment: string | null;
   created_at: string;
   updated_at: string;
-  is_approved: boolean;
+  is_verified: boolean;
+  product?: {
+    id: number;
+    title: string;
+    image: string | null;
+    slug: string | null;
+  };
 }
 
 interface ShippingAddress {
   id: number;
   address_line1: string;
+  address_line2: string | null;
   city: string;
-  postal_code: string;
+  state: string | null;
+  postal_code: string | null;
+  country: string;
+  phone: string;
+  is_default: boolean;
 }
 
 interface PaymentMethod {
   id: number;
   method_type: string;
+  phone_number: string;
   last_four: string;
+  is_default: boolean;
 }
 
 const Profile = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, logout } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [shippingAddresses, setShippingAddresses] = useState<ShippingAddress[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
-  const [imageError, setImageError] = useState(false); // New state for image load failure
-  const { logout } = useAuth();
+  const [imageError, setImageError] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch user data
+  // Fetch user data from Supabase
   useEffect(() => {
     const fetchProfileData = async () => {
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+
       try {
         setLoading(true);
+        setError('');
 
-        const userResponse = await api.get('users/me/');
-        setUser(userResponse.data);
+        // Fetch profile data (will auto-create if doesn't exist)
+        const profileData = await getProfile(user.id);
+        setProfile(profileData as Profile);
 
-        const ordersResponse = await api.get('api/user/orders/');
-        setOrders(ordersResponse.data);
+        // Fetch orders (may be empty for new users)
+        try {
+          const ordersData = await getUserOrders(user.id);
+          setOrders(ordersData as Order[]);
+        } catch (err) {
+          console.log('No orders found for user');
+          setOrders([]);
+        }
 
-        const reviewsResponse = await api.get('api/users/reviews/');
-        setReviews(reviewsResponse.data);
+        // Fetch reviews (may be empty for new users)
+        try {
+          const reviewsData = await getUserReviews(user.id);
+          setReviews(reviewsData as Review[]);
+        } catch (err) {
+          console.log('No reviews found for user');
+          setReviews([]);
+        }
 
-        const shippingResponse = await api.get('users/shipping-addresses');
-        setShippingAddresses(shippingResponse.data);
+        // Fetch shipping addresses (may be empty for new users)
+        try {
+          const shippingData = await getShippingAddresses(user.id);
+          setShippingAddresses(shippingData as ShippingAddress[]);
+        } catch (err) {
+          console.log('No shipping addresses found for user');
+          setShippingAddresses([]);
+        }
 
-        const paymentResponse = await api.get('users/payment-methods');
-        setPaymentMethods(paymentResponse.data);
+        // Fetch payment methods (may be empty for new users)
+        try {
+          const paymentData = await getPaymentMethods(user.id);
+          setPaymentMethods(paymentData as PaymentMethod[]);
+        } catch (err) {
+          console.log('No payment methods found for user');
+          setPaymentMethods([]);
+        }
       } catch (err: any) {
-        setError(err.response?.data?.detail || 'Failed to fetch profile data.');
+        console.error('Error fetching profile data:', err);
+        setError(err.message || 'Failed to fetch profile data.');
       } finally {
         setLoading(false);
       }
     };
     fetchProfileData();
-  }, []);
+  }, [user, navigate]);
 
   const handleLogOutClick = () => {
     logout();
     navigate('/');
   };
 
-  // Helper function to normalize image URL
+  // Helper function to get image URL from Supabase storage
   const getImageUrl = (imagePath: string | null): string | undefined => {
     if (!imagePath) return undefined;
     if (imagePath.startsWith('http')) return imagePath;
-    return `${import.meta.env.VITE_API_URL}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+    // If it's a Supabase storage path, return as is
+    return imagePath;
   };
   
   if (loading) {
@@ -104,6 +165,10 @@ const Profile = () => {
 
   if (error) {
     return <div className="text-center py-10 text-red-500">{error}</div>;
+  }
+
+  if (!user || !profile) {
+    return <div className="text-center py-10">Please sign in to view your profile</div>;
   }
 
   return (
@@ -122,20 +187,21 @@ const Profile = () => {
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
         <div className="flex items-center space-x-4">
           <div className="w-16 h-16 bg-gray-300 rounded-full overflow-hidden">
-            {user?.profile?.image && !imageError ? (
+            {profile?.image && !imageError ? (
               <img
-                src={getImageUrl(user.profile.image)}
+                src={getImageUrl(profile.image)}
                 alt="Profile"
                 className="w-full h-full object-cover"
-                onError={() => setImageError(true)} // Switch to icon if image fails
+                onError={() => setImageError(true)}
               />
             ) : (
               <FaUserAlt className="w-16 h-16 text-gray-400" />
             )}
           </div>
           <div>
-            <h3 className="text-xl font-semibold">{user?.username || 'Loading...'}</h3>
+            <h3 className="text-xl font-semibold">{profile?.username || profile?.full_name || 'User'}</h3>
             <p className="text-gray-600">{user?.email || 'No email'}</p>
+            {profile?.phone && <p className="text-sm text-gray-500">{profile.phone}</p>}
           </div>
         </div>
       </div>

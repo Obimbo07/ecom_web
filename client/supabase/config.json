@@ -1,0 +1,117 @@
+{
+  "name": "moha-collection-ecommerce",
+  "version": "1.0.0",
+  "description": "Supabase configuration for Moha Fashion Collection e-commerce platform",
+  "scripts": {
+    "setup": "node scripts/setup-supabase.js",
+    "migrate": "node scripts/run-migrations.js",
+    "seed": "node scripts/seed-data.js"
+  },
+  "supabase": {
+    "project_ref": "cwugrtwndvaawxoivmgz",
+    "project_url": "https://cwugrtwndvaawxoivmgz.supabase.co",
+    "region": "us-east-1"
+  },
+  "database": {
+    "schema_files": [
+      "supabase/schema.sql",
+      "supabase/storage_policies.sql"
+    ],
+    "migrations_path": "supabase/migrations"
+  },
+  "storage": {
+    "buckets": [
+      {
+        "name": "product-images",
+        "public": true,
+        "fileSizeLimit": 5242880,
+        "allowedMimeTypes": [
+          "image/png",
+          "image/jpeg",
+          "image/jpg",
+          "image/webp",
+          "image/avif"
+        ]
+      },
+      {
+        "name": "category-images",
+        "public": true,
+        "fileSizeLimit": 2097152,
+        "allowedMimeTypes": [
+          "image/png",
+          "image/jpeg",
+          "image/jpg",
+          "image/webp"
+        ]
+      },
+      {
+        "name": "user-avatars",
+        "public": true,
+        "fileSizeLimit": 2097152,
+        "allowedMimeTypes": [
+          "image/png",
+          "image/jpeg",
+          "image/jpg",
+          "image/webp"
+        ]
+      }
+    ]
+  },
+  "edge_functions": [
+    {
+      "name": "mpesa-stk-push",
+      "path": "supabase/functions/mpesa-stk-push",
+      "description": "Initiate M-Pesa STK Push payment"
+    },
+    {
+      "name": "mpesa-callback",
+      "path": "supabase/functions/mpesa-callback",
+      "description": "Handle M-Pesa payment callbacks"
+    },
+    {
+      "name": "mpesa-query",
+      "path": "supabase/functions/mpesa-query",
+      "description": "Query M-Pesa payment status"
+    }
+  ],
+  "rls_policies": {
+    "enabled": true,
+    "tables": [
+      "profiles",
+      "categories",
+      "products",
+      "product_images",
+      "tags",
+      "product_tags",
+      "holiday_deals",
+      "product_deals",
+      "carts",
+      "cart_items",
+      "shipping_addresses",
+      "payment_methods",
+      "orders",
+      "order_items",
+      "reviews",
+      "checkout_sessions",
+      "promocodes",
+      "user_promocode_usage",
+      "wishlists",
+      "notifications"
+    ]
+  },
+  "auth": {
+    "providers": [
+      "email",
+      "google",
+      "facebook"
+    ],
+    "email_confirm_required": true,
+    "password_requirements": {
+      "min_length": 8,
+      "require_uppercase": true,
+      "require_lowercase": true,
+      "require_numbers": true,
+      "require_special_chars": false
+    }
+  }
+}

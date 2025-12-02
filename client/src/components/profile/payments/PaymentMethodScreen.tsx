@@ -3,8 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle, DrawerTrigger } from '@/components/ui/drawer';
 import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
-import api from '@/api';
 import { useAuth } from '@/context/AuthContext';
+import { 
+  getPaymentMethods, 
+  createPaymentMethod, 
+  updatePaymentMethod, 
+  deletePaymentMethod 
+} from '@/lib/supabase';
 
 interface PaymentMethod {
   id: number;
@@ -21,52 +26,79 @@ const PaymentMethodScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
-  const { isAuthenticated } = useAuth();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isAuthenticated) navigate('/login');
+    if (!user) {
+      navigate('/signin');
+      return;
+    }
     fetchMethods();
-  }, [isAuthenticated, navigate]);
+  }, [user, navigate]);
 
   const fetchMethods = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
-      const response = await api.get('users/payment-methods/');
-      setMethods(response.data);
+      setError('');
+      const data = await getPaymentMethods(user.id);
+      setMethods(data as PaymentMethod[]);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to fetch payment methods.');
+      console.error('Error fetching payment methods:', err);
+      setError(err.message || 'Failed to fetch payment methods.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleAddMethod = async (formData: any) => {
+    if (!user) return;
+    
     try {
-      const response = await api.post('users/payment-methods/', formData);
-      setMethods([...methods, response.data]);
-      setSelectedMethod(null); // Close drawer
+      const newMethod = await createPaymentMethod(user.id, {
+        methodType: formData.method_type,
+        phoneNumber: formData.phone_number,
+        lastFour: formData.last_four,
+        isDefault: formData.is_default,
+      });
+      setMethods([...methods, newMethod as PaymentMethod]);
+      setSelectedMethod(null);
+      setIsDrawerOpen(false);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to add payment method.');
+      console.error('Error adding payment method:', err);
+      setError(err.message || 'Failed to add payment method.');
     }
   };
 
   const handleUpdateMethod = async (id: number, formData: any) => {
     try {
-      const response = await api.put(`users/payment-methods/${id}/`, formData);
-      setMethods(methods.map(method => method.id === id ? response.data : method));
-      setSelectedMethod(null); // Close drawer
+      const updatedMethod = await updatePaymentMethod(id, {
+        methodType: formData.method_type,
+        phoneNumber: formData.phone_number,
+        lastFour: formData.last_four,
+        isDefault: formData.is_default,
+      });
+      setMethods(methods.map(method => method.id === id ? updatedMethod as PaymentMethod : method));
+      setSelectedMethod(null);
+      setIsDrawerOpen(false);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to update payment method.');
+      console.error('Error updating payment method:', err);
+      setError(err.message || 'Failed to update payment method.');
     }
   };
 
   const handleDeleteMethod = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this payment method?')) return;
+    
     try {
-      await api.delete(`users/payment-methods/${id}/`);
+      await deletePaymentMethod(id);
       setMethods(methods.filter(method => method.id !== id));
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to delete payment method.');
+      console.error('Error deleting payment method:', err);
+      setError(err.message || 'Failed to delete payment method.');
     }
   };
 
@@ -85,9 +117,12 @@ const PaymentMethodScreen = () => {
     <div className="min-h-screen bg-gray-100 p-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-semibold">Payment Methods</h2>
-        <Drawer>
+        <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
           <DrawerTrigger asChild>
-            <Button className="bg-blue-500 text-white">
+            <Button className="bg-blue-500 text-white" onClick={() => {
+              setSelectedMethod(null);
+              setIsDrawerOpen(true);
+            }}>
               <FaPlus className="mr-2" /> Add Method
             </Button>
           </DrawerTrigger>
@@ -162,9 +197,16 @@ const PaymentMethodScreen = () => {
                 {method.is_default && <p className="text-green-500">Default</p>}
               </div>
               <div className="space-x-2">
-                <Button variant="ghost" onClick={() => setSelectedMethod(method)}>
-                  <FaEdit />
-                </Button>
+                <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+                  <DrawerTrigger asChild>
+                    <Button variant="ghost" onClick={() => {
+                      setSelectedMethod(method);
+                      setIsDrawerOpen(true);
+                    }}>
+                      <FaEdit />
+                    </Button>
+                  </DrawerTrigger>
+                </Drawer>
                 <Button variant="ghost" onClick={() => handleDeleteMethod(method.id)}>
                   <FaTrash className="text-red-500" />
                 </Button>
