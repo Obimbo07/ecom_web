@@ -21,7 +21,7 @@ interface Product {
   price: number;
   old_price: number | null;
   image: string | null;
-  images: string[] | null;
+  images: string[] | { id: number; image: string; alt_text: string | null; display_order: number; }[] | null;
   description: string | null;
   specifications: string | null;
   type: string | null;
@@ -43,6 +43,13 @@ export function ProductCard({ product }: ProductCardProps) {
   const { user } = useAuth();
   const [fetchDisabled, setFetchDisabled] = useState(false);
 
+  // Helper function to get image URL from either string or object
+  const getImageUrl = (img: string | { id: number; image: string; alt_text: string | null; display_order: number; } | null | undefined): string | null => {
+    if (!img) return null;
+    if (typeof img === 'string') return img;
+    return img.image;
+  };
+
   // Regular discount (old_price vs price)
   const hasRegularDiscount = product.old_price !== null && product.old_price > product.price;
   const regularDiscountPercentage = hasRegularDiscount && product.old_price
@@ -53,13 +60,13 @@ export function ProductCard({ product }: ProductCardProps) {
   const displayPrice = product.price;
 
   // Get primary image (main image) or first from images array
-  const primaryImage = product.image || (product.images && product.images.length > 0 ? product.images[0] : null);
+  const primaryImage = product.image || (product.images && product.images.length > 0 ? getImageUrl(product.images[0]) : null);
   
   // Get all images for carousel - ensure no duplicates
   const allImages = Array.from(new Set([
     ...(product.image ? [product.image] : []),
-    ...(product.images || [])
-  ])).filter(Boolean);
+    ...(product.images || []).map(img => getImageUrl(img)).filter(Boolean)
+  ])).filter(Boolean) as string[];
 
   // Render stars based on rating (placeholder; can be enhanced with actual ratings)
   const renderStars = (rating: number) => {

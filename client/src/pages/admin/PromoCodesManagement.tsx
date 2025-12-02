@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Ticket, Plus, Edit, Trash2, X, Search } from 'lucide-react'
+import { Plus, Edit, Trash2, X, Search } from 'lucide-react'
 import { getAllPromoCodes, createPromoCode, updatePromoCode, deletePromoCode } from '@/lib/supabase'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog"
 import { Button } from '@/components/ui/button'

@@ -24,15 +24,23 @@ interface Product {
   id: number;
   title: string;
   price: number;
-  old_price: number;
+  old_price: number | null;
   image: string | null;
-  description: string;
+  images: string[] | { id: number; image: string; alt_text: string | null; display_order: number; }[] | null;
+  description: string | null;
   specifications: string | null;
-  type: string;
-  stock_count: string;
-  life: string;
-  additional_images: { id: number; image: string | null; date: string }[];
-  holiday_deals: HolidayDeal | null;
+  type: string | null;
+  stock_count: number;
+  slug: string | null;
+  featured: boolean;
+  category: {
+    id: number;
+    title: string;
+    slug: string | null;
+  } | null;
+  life?: string;
+  additional_images?: { id: number; image: string | null; date: string }[];
+  holiday_deals?: HolidayDeal | null;
 }
 
 const DealDetailScreen: React.FC = () => {
