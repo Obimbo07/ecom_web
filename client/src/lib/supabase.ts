@@ -1014,23 +1014,57 @@ export const getAllProducts = async () => {
 
 export const getAllOrders = async () => {
   console.log('getAllOrders: Starting fetch...')
-  const { data, error } = await supabase
+  
+  // First, get all orders with their related data
+  const { data: orders, error: ordersError } = await supabase
     .from('orders')
     .select(`
       *,
-      profiles!orders_user_id_fkey(id, username, full_name),
-      shipping_addresses!orders_shipping_address_id_fkey(*),
-      payment_methods!orders_payment_method_id_fkey(*),
+      shipping_addresses(*),
+      payment_methods(*),
       order_items(*)
     `)
     .order('created_at', { ascending: false })
 
-  console.log('getAllOrders: Response', { data, error, count: data?.length })
-  if (error) {
-    console.error('getAllOrders: Error details', error)
-    throw error
+  if (ordersError) {
+    console.error('getAllOrders: Error details', ordersError)
+    throw ordersError
   }
-  return data
+
+  if (!orders || orders.length === 0) {
+    return []
+  }
+
+  // Get unique user IDs (filter out nulls)
+  const userIds = [...new Set(orders.map(o => o.user_id).filter(Boolean))] as string[]
+
+  // Fetch profiles for these users
+  let profiles: any[] = []
+  if (userIds.length > 0) {
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, username, full_name, image')
+      .in('id', userIds)
+
+    if (profilesError) {
+      console.error('getAllOrders: Profiles fetch error', profilesError)
+      // Don't throw, just continue without profiles
+    } else {
+      profiles = profilesData || []
+    }
+  }
+
+  // Merge profiles into orders
+  const ordersWithProfiles = orders.map(order => {
+    const profile = profiles.find(p => p.id === order.user_id)
+    return {
+      ...order,
+      profiles: profile || null
+    }
+  })
+
+  console.log('getAllOrders: Response', { count: ordersWithProfiles.length })
+  return ordersWithProfiles
 }
 
 export default supabase
