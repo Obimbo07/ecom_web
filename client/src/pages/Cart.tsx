@@ -16,7 +16,7 @@ import {
 
 // Define interfaces based on Supabase schema
 interface CartItem {
-  id: number;
+  id: number | string; // Can be numeric (user cart) or string (guest cart)
   product_id: number;
   quantity: number;
   size: string | null;
@@ -59,10 +59,12 @@ const Cart = () => {
         const { getProducts } = await import('@/lib/supabase');
         const products = await getProducts({});
         
-        const itemsWithDetails = guestCart.map((item: GuestCartItem) => {
+        const itemsWithDetails = guestCart.map((item: GuestCartItem, index: number) => {
           const product = products?.find((p: any) => p.id === item.product_id) as any;
+          // Create unique ID for guest cart items using index and product details
+          const uniqueId = `guest-${item.product_id}-${item.size || 'nosize'}-${item.color || 'nocolor'}-${index}`;
           return {
-            id: item.product_id, // Use product_id as temporary id for guest cart
+            id: uniqueId, // Use unique string ID for guest cart
             product_id: item.product_id,
             quantity: item.quantity,
             size: item.size || null,
@@ -73,7 +75,7 @@ const Cart = () => {
           };
         });
         
-        setCartItems(itemsWithDetails);
+        setCartItems(itemsWithDetails as any);
       }
     } catch (err: any) {
       console.error('Error fetching cart:', err);
@@ -88,33 +90,33 @@ const Cart = () => {
   }, [user]);
 
   // Update cart item (quantity)
-  const updateCartItem = async (cartItemId: number, quantityDelta?: number) => {
+  const updateCartItem = async (cartItemId: number | string, quantityDelta?: number) => {
     try {
       setMessage(null);
       
       if (user) {
-        // Update user cart
+        // Update user cart (cartItemId is numeric)
         const item = cartItems.find(i => i.id === cartItemId);
         if (!item) return;
         
         const newQuantity = quantityDelta !== undefined ? item.quantity + quantityDelta : item.quantity;
         
         if (newQuantity <= 0) {
-          await removeFromUserCart(cartItemId);
+          await removeFromUserCart(cartItemId as number);
         } else {
-          await updateUserCartItem(cartItemId, newQuantity);
+          await updateUserCartItem(cartItemId as number, newQuantity);
         }
       } else {
-        // Update guest cart
-        const item = cartItems.find(i => i.product_id === cartItemId);
+        // Update guest cart (cartItemId is string like "guest-123-M-red-0")
+        const item = cartItems.find(i => i.id === cartItemId);
         if (!item) return;
         
         const newQuantity = quantityDelta !== undefined ? item.quantity + quantityDelta : item.quantity;
         
         if (newQuantity <= 0) {
-          removeFromGuestCart(cartItemId);
+          removeFromGuestCart(item.product_id);
         } else {
-          updateGuestCartItem(cartItemId, newQuantity);
+          updateGuestCartItem(item.product_id, newQuantity);
         }
       }
       
@@ -129,14 +131,18 @@ const Cart = () => {
   };
 
   // Remove item from cart
-  const removeFromCart = async (cartItemId: number) => {
+  const removeFromCart = async (cartItemId: number | string) => {
     try {
       setMessage(null);
       
       if (user) {
-        await removeFromUserCart(cartItemId);
+        await removeFromUserCart(cartItemId as number);
       } else {
-        removeFromGuestCart(cartItemId);
+        // For guest cart, find the item to get the product_id
+        const item = cartItems.find(i => i.id === cartItemId);
+        if (item) {
+          removeFromGuestCart(item.product_id);
+        }
       }
       
       await fetchCart();
@@ -150,12 +156,12 @@ const Cart = () => {
   };
 
   // Increment quantity
-  const incrementQuantity = (cartItemId: number) => {
+  const incrementQuantity = (cartItemId: number | string) => {
     updateCartItem(cartItemId, 1);
   };
 
   // Decrement quantity
-  const decrementQuantity = (cartItemId: number, currentQuantity: number) => {
+  const decrementQuantity = (cartItemId: number | string, currentQuantity: number) => {
     if (currentQuantity > 1) {
       updateCartItem(cartItemId, -1);
     }

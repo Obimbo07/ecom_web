@@ -364,7 +364,15 @@ export const getUserCart = async (userId: string) => {
     .eq('cart_id', cart!.id)
 
   if (error) throw error
-  return { cart: cart!, items: data || [] }
+  
+  // Map cart_item_id to id and unit_price to product_price for compatibility with Cart component
+  const items = (data || []).map((item: any) => ({
+    ...item,
+    id: item.cart_item_id,
+    product_price: item.unit_price // Map unit_price to product_price
+  }))
+  
+  return { cart: cart!, items }
 }
 
 export const addToUserCart = async (userId: string, item: Omit<GuestCartItem, 'product_id'> & { productId: number }) => {
@@ -544,6 +552,7 @@ export const createOrder = async (orderData: {
   
   const { data: products, error: productsError } = await supabase
     .from('products')
+    .select('*')
     .in('id', productIds)
 
   if (productsError) {
@@ -629,7 +638,7 @@ export const getOrderByNumber = async (orderNumber: string) => {
           id,
           title,
           image,
-          slug,
+          slug
         )
       ),
       shipping_address:shipping_addresses(*),
@@ -654,7 +663,7 @@ export const getOrderById = async (orderId: number) => {
           title,
           price,
           image,
-          slug,
+          slug
         )
       ),
       shipping_address:shipping_addresses(*),
