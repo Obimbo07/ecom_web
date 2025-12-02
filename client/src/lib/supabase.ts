@@ -1067,4 +1067,477 @@ export const getAllOrders = async () => {
   return ordersWithProfiles
 }
 
+// ============================================
+// CATEGORIES CRUD
+// ============================================
+
+export const getAllCategories = async () => {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .order('display_order', { ascending: true })
+  
+  if (error) throw error
+  return data
+}
+
+export const createCategory = async (category: {
+  title: string
+  description?: string
+  image?: string
+  slug?: string
+  is_active?: boolean
+  display_order?: number
+}) => {
+  const { data, error } = await supabase
+    .from('categories')
+    .insert([category])
+    .select()
+  
+  if (error) throw error
+  return data
+}
+
+export const updateCategory = async (id: number, updates: any) => {
+  const { data, error } = await supabase
+    .from('categories')
+    .update(updates)
+    .eq('id', id)
+    .select()
+  
+  if (error) throw error
+  return data
+}
+
+export const deleteCategory = async (id: number) => {
+  const { error } = await supabase
+    .from('categories')
+    .delete()
+    .eq('id', id)
+  
+  if (error) throw error
+}
+
+// ============================================
+// USERS/PROFILES CRUD
+// ============================================
+
+export const getAllUsers = async () => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('created_at', { ascending: false })
+  
+  if (error) throw error
+  return data
+}
+
+export const updateUserProfile = async (id: string, updates: any) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', id)
+    .select()
+  
+  if (error) throw error
+  return data
+}
+
+// ============================================
+// HOLIDAY DEALS CRUD
+// ============================================
+
+export const getAllDeals = async () => {
+  const { data, error } = await supabase
+    .from('holiday_deals')
+    .select(`
+      *,
+      product_deals(
+        id,
+        discounted_price,
+        products(id, title, image, price)
+      )
+    `)
+    .order('created_at', { ascending: false })
+  
+  if (error) throw error
+  return data
+}
+
+export const createDeal = async (deal: {
+  name: string
+  description?: string
+  discount_percentage: number
+  start_date: string
+  end_date: string
+  is_active?: boolean
+  image?: string
+}) => {
+  const { data, error } = await supabase
+    .from('holiday_deals')
+    .insert([deal])
+    .select()
+  
+  if (error) throw error
+  return data
+}
+
+export const updateDeal = async (deal_id: string, updates: any) => {
+  const { data, error } = await supabase
+    .from('holiday_deals')
+    .update(updates)
+    .eq('deal_id', deal_id)
+    .select()
+  
+  if (error) throw error
+  return data
+}
+
+export const deleteDeal = async (deal_id: string) => {
+  const { error } = await supabase
+    .from('holiday_deals')
+    .delete()
+    .eq('deal_id', deal_id)
+  
+  if (error) throw error
+}
+
+export const addProductToDeal = async (productDeal: {
+  product_id: number
+  deal_id: string
+  discounted_price: number
+}) => {
+  const { data, error } = await supabase
+    .from('product_deals')
+    .insert([productDeal])
+    .select()
+  
+  if (error) throw error
+  return data
+}
+
+export const removeProductFromDeal = async (id: number) => {
+  const { error } = await supabase
+    .from('product_deals')
+    .delete()
+    .eq('id', id)
+  
+  if (error) throw error
+}
+
+// ============================================
+// REVIEWS CRUD
+// ============================================
+
+export const getAllReviews = async () => {
+  // First get all reviews with products
+  const { data: reviews, error } = await supabase
+    .from('reviews')
+    .select(`
+      *,
+      products(id, title, image)
+    `)
+    .order('created_at', { ascending: false })
+  
+  if (error) throw error
+  if (!reviews) return []
+
+  // Get unique user IDs
+  const userIds = [...new Set(reviews.map(r => r.user_id).filter(Boolean))]
+  
+  // Fetch profiles separately
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, username, full_name, image')
+    .in('id', userIds)
+  
+  // Merge profiles into reviews
+  const reviewsWithProfiles = reviews.map(review => ({
+    ...review,
+    profile: profiles?.find(p => p.id === review.user_id) || null
+  }))
+  
+  return reviewsWithProfiles
+}
+
+export const approveReview = async (id: number, isApproved: boolean) => {
+  const { data, error } = await supabase
+    .from('reviews')
+    .update({ is_approved: isApproved })
+    .eq('id', id)
+    .select()
+  
+  if (error) throw error
+  return data
+}
+
+export const deleteReview = async (id: number) => {
+  const { error } = await supabase
+    .from('reviews')
+    .delete()
+    .eq('id', id)
+  
+  if (error) throw error
+}
+
+// ============================================
+// PROMO CODES CRUD
+// ============================================
+
+export const getAllPromoCodes = async () => {
+  const { data, error } = await supabase
+    .from('promocodes')
+    .select('*')
+    .order('created_at', { ascending: false })
+  
+  if (error) throw error
+  return data
+}
+
+export const createPromoCode = async (promocode: {
+  code: string
+  description?: string
+  discount_type: 'percentage' | 'fixed'
+  discount_value: number
+  min_order_amount?: number
+  max_discount?: number
+  usage_limit?: number
+  valid_from: string
+  valid_until: string
+  is_active?: boolean
+}) => {
+  const { data, error } = await supabase
+    .from('promocodes')
+    .insert([promocode])
+    .select()
+  
+  if (error) throw error
+  return data
+}
+
+export const updatePromoCode = async (id: number, updates: any) => {
+  const { data, error } = await supabase
+    .from('promocodes')
+    .update(updates)
+    .eq('id', id)
+    .select()
+  
+  if (error) throw error
+  return data
+}
+
+export const deletePromoCode = async (id: number) => {
+  const { error } = await supabase
+    .from('promocodes')
+    .delete()
+    .eq('id', id)
+  
+  if (error) throw error
+}
+
+// ============================================
+// ANALYTICS
+// ============================================
+
+export const getAnalytics = async (days: number = 30) => {
+  const startDate = new Date()
+  startDate.setDate(startDate.getDate() - days)
+  const startDateStr = startDate.toISOString()
+
+  // Get previous period for comparison
+  const prevStartDate = new Date(startDate)
+  prevStartDate.setDate(prevStartDate.getDate() - days)
+  const prevStartDateStr = prevStartDate.toISOString()
+
+  try {
+    // Get current period orders
+    const { data: currentOrders } = await supabase
+      .from('orders')
+      .select('*, order_items(quantity, price, product_id, products(id, title, image, category_id, categories(title)))')
+      .gte('created_at', startDateStr) as any
+
+    // Get previous period orders for comparison
+    const { data: prevOrders } = await supabase
+      .from('orders')
+      .select('id, total, created_at')
+      .gte('created_at', prevStartDateStr)
+      .lt('created_at', startDateStr) as any
+
+    // Get all products count
+    const { count: totalProducts } = await supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true })
+
+    const { count: prevTotalProducts } = await supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true })
+      .lt('created_at', startDateStr)
+
+    // Get customers count
+    const { count: totalCustomers } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'customer')
+
+    const { count: prevTotalCustomers } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'customer')
+      .lt('created_at', startDateStr)
+
+    // Calculate current period metrics
+    const totalRevenue = currentOrders?.reduce((sum: number, order: any) => sum + (order.total || 0), 0) || 0
+    const totalOrders = currentOrders?.length || 0
+
+    // Calculate previous period metrics
+    const prevTotalRevenue = prevOrders?.reduce((sum: number, order: any) => sum + (order.total || 0), 0) || 0
+    const prevTotalOrders = prevOrders?.length || 0
+
+    // Calculate percentage changes
+    const revenueChange = prevTotalRevenue > 0 
+      ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100 
+      : 100
+
+    const ordersChange = prevTotalOrders > 0 
+      ? ((totalOrders - prevTotalOrders) / prevTotalOrders) * 100 
+      : 100
+
+    const customersChange = prevTotalCustomers && prevTotalCustomers > 0
+      ? (((totalCustomers || 0) - prevTotalCustomers) / prevTotalCustomers) * 100
+      : 100
+
+    const productsChange = prevTotalProducts && prevTotalProducts > 0
+      ? (((totalProducts || 0) - prevTotalProducts) / prevTotalProducts) * 100
+      : 0
+
+    // Calculate average order value
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
+
+    // Get top selling products
+    const productSales: Record<number, { title: string; sales: number; revenue: number; image: string | null }> = {}
+    
+    currentOrders?.forEach((order: any) => {
+      order.order_items?.forEach((item: any) => {
+        const productId = item.product_id
+        if (!productSales[productId]) {
+          productSales[productId] = {
+            title: item.products?.title || 'Unknown Product',
+            sales: 0,
+            revenue: 0,
+            image: item.products?.image || null
+          }
+        }
+        productSales[productId].sales += item.quantity
+        productSales[productId].revenue += item.quantity * item.price
+      })
+    })
+
+    const topProducts = Object.entries(productSales)
+      .map(([id, data]) => ({ id: parseInt(id), ...data }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5)
+
+    // Get category performance
+    const categoryPerformance: Record<string, { sales: number; revenue: number }> = {}
+    
+    currentOrders?.forEach((order: any) => {
+      order.order_items?.forEach((item: any) => {
+        const category = item.products?.categories?.title || 'Uncategorized'
+        if (!categoryPerformance[category]) {
+          categoryPerformance[category] = { sales: 0, revenue: 0 }
+        }
+        categoryPerformance[category].sales += item.quantity
+        categoryPerformance[category].revenue += item.quantity * item.price
+      })
+    })
+
+    const categoryPerformanceArray = Object.entries(categoryPerformance)
+      .map(([category, data]) => ({ category, ...data }))
+      .sort((a, b) => b.revenue - a.revenue)
+
+    // Get revenue by month (last 6 months)
+    const revenueByMonth: Record<string, number> = {}
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    
+    // Initialize last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date()
+      date.setMonth(date.getMonth() - i)
+      const monthKey = `${monthNames[date.getMonth()]} ${date.getFullYear()}`
+      revenueByMonth[monthKey] = 0
+    }
+
+    currentOrders?.forEach((order: any) => {
+      const orderDate = new Date(order.created_at)
+      const monthKey = `${monthNames[orderDate.getMonth()]} ${orderDate.getFullYear()}`
+      if (revenueByMonth.hasOwnProperty(monthKey)) {
+        revenueByMonth[monthKey] += order.total || 0
+      }
+    })
+
+    const revenueByMonthArray = Object.entries(revenueByMonth).map(([month, revenue]) => ({
+      month,
+      revenue
+    }))
+
+    // Get orders by status
+    const ordersByStatus = {
+      pending: 0,
+      processing: 0,
+      shipped: 0,
+      delivered: 0,
+      cancelled: 0
+    }
+
+    currentOrders?.forEach((order: any) => {
+      const status = order.status as keyof typeof ordersByStatus
+      if (status in ordersByStatus) {
+        ordersByStatus[status]++
+      }
+    })
+
+    // Get recent orders with customer info
+    const recentOrdersData = currentOrders
+      ?.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 10) || []
+
+    // Fetch customer profiles for recent orders
+    const userIds = [...new Set(recentOrdersData.map((order: any) => order.user_id))]
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, username, full_name')
+      .in('id', userIds)
+
+    const recentOrders = recentOrdersData.map((order: any) => ({
+      id: order.id,
+      created_at: order.created_at,
+      total: order.total || 0,
+      status: order.status,
+      customer_name: profiles?.find(p => p.id === order.user_id)?.username || 
+                     profiles?.find(p => p.id === order.user_id)?.full_name || 
+                     'Unknown Customer'
+    }))
+
+    return {
+      totalRevenue,
+      revenueChange,
+      totalOrders,
+      ordersChange,
+      totalCustomers: totalCustomers || 0,
+      customersChange,
+      totalProducts: totalProducts || 0,
+      productsChange,
+      averageOrderValue,
+      topProducts,
+      recentOrders,
+      categoryPerformance: categoryPerformanceArray,
+      revenueByMonth: revenueByMonthArray,
+      ordersByStatus
+    }
+  } catch (error) {
+    console.error('Error fetching analytics:', error)
+    throw error
+  }
+}
+
 export default supabase

@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Package, ShoppingCart, LogOut } from 'lucide-react'
+import { Package, ShoppingCart, LogOut, FolderTree, Users, Gift, Star, Ticket, BarChart3 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 interface AdminLayoutProps {
@@ -11,11 +11,20 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const navigate = useNavigate()
 
   const navigation = [
+    { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
     { name: 'Products', href: '/admin/products', icon: Package },
+    { name: 'Categories', href: '/admin/categories', icon: FolderTree },
     { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
+    { name: 'Users', href: '/admin/users', icon: Users },
+    { name: 'Holiday Deals', href: '/admin/deals', icon: Gift },
+    { name: 'Reviews', href: '/admin/reviews', icon: Star },
+    { name: 'Promo Codes', href: '/admin/promo-codes', icon: Ticket },
   ]
 
-  const isActive = (path: string) => location.pathname === path
+  const isActive = (path: string) => {
+    if (path === '/admin/analytics' && location.pathname === '/admin') return true
+    return location.pathname === path
+  }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()

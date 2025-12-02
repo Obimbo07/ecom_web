@@ -22,6 +22,12 @@ import AdminRoute from './components/admin/AdminRoute';
 import AdminLayout from './components/admin/AdminLayout';
 import ProductsManagement from './pages/admin/ProductsManagement';
 import OrdersManagement from './pages/admin/OrdersManagement';
+import CategoriesManagement from './pages/admin/CategoriesManagement';
+import UsersManagement from './pages/admin/UsersManagement';
+import DealsManagement from './pages/admin/DealsManagement';
+import ReviewsManagement from './pages/admin/ReviewsManagement';
+import PromoCodesManagement from './pages/admin/PromoCodesManagement';
+import AnalyticsDashboard from './pages/admin/AnalyticsDashboard';
 
 // Component to conditionally render Navbar
 const AppContent = () => {
@@ -73,7 +79,14 @@ const AppContent = () => {
           <Route path="/admin" element={
             <AdminRoute>
               <AdminLayout>
-                <ProductsManagement />
+                <AnalyticsDashboard />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/analytics" element={
+            <AdminRoute>
+              <AdminLayout>
+                <AnalyticsDashboard />
               </AdminLayout>
             </AdminRoute>
           } />
@@ -88,6 +101,41 @@ const AppContent = () => {
             <AdminRoute>
               <AdminLayout>
                 <OrdersManagement />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/categories" element={
+            <AdminRoute>
+              <AdminLayout>
+                <CategoriesManagement />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/users" element={
+            <AdminRoute>
+              <AdminLayout>
+                <UsersManagement />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/deals" element={
+            <AdminRoute>
+              <AdminLayout>
+                <DealsManagement />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/reviews" element={
+            <AdminRoute>
+              <AdminLayout>
+                <ReviewsManagement />
+              </AdminLayout>
+            </AdminRoute>
+          } />
+          <Route path="/admin/promo-codes" element={
+            <AdminRoute>
+              <AdminLayout>
+                <PromoCodesManagement />
               </AdminLayout>
             </AdminRoute>
           } />

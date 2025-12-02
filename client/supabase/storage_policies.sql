@@ -112,6 +112,41 @@ USING (
 );
 
 -- ============================================
+-- DEALS/HOLIDAY DEALS BUCKET
+-- ============================================
+-- Bucket: deals (Public)
+-- Purpose: Store holiday deals and promotional images
+
+-- Allow public read access to deal images
+CREATE POLICY "Deal images are publicly accessible"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'deals');
+
+-- Allow authenticated users to upload deal images (admin only in production)
+CREATE POLICY "Authenticated users can upload deal images"
+ON storage.objects FOR INSERT
+WITH CHECK (
+  bucket_id = 'deals' 
+  AND auth.role() = 'authenticated'
+);
+
+-- Allow authenticated users to update deal images (admin only in production)
+CREATE POLICY "Authenticated users can update deal images"
+ON storage.objects FOR UPDATE
+USING (
+  bucket_id = 'deals' 
+  AND auth.role() = 'authenticated'
+);
+
+-- Allow authenticated users to delete deal images (admin only in production)
+CREATE POLICY "Authenticated users can delete deal images"
+ON storage.objects FOR DELETE
+USING (
+  bucket_id = 'deals' 
+  AND auth.role() = 'authenticated'
+);
+
+-- ============================================
 -- BUCKET CREATION COMMANDS (Run in Supabase Dashboard or via API)
 -- ============================================
 
@@ -146,6 +181,13 @@ await supabase.storage.createBucket('user-avatars', {
   public: true,
   fileSizeLimit: 2097152, // 2MB
   allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp']
+})
+
+// Create deals bucket
+await supabase.storage.createBucket('deals', {
+  public: true,
+  fileSizeLimit: 3145728, // 3MB
+  allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp', 'image/avif']
 })
 */
 
